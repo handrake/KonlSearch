@@ -12,13 +12,7 @@ class KonlSearch:
         options.create_missing_column_families(True)
         self.db = rocksdict.Rdict(path=self.path, options=options)
 
-    def get_index(self, name) -> KonlIndex:
-        return KonlIndexFactory.get(self.db, name)
-
-    def create_index(self, name) -> KonlIndex:
-        return KonlIndexFactory.create(self.db, name)
-
-    def create_or_get_index(self, name) -> KonlIndex:
+    def index(self, name) -> KonlIndex:
         return KonlIndexFactory.create_or_get(self.db, name)
 
 # class SearchOption(enum.Enum):

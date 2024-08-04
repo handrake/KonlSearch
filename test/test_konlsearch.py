@@ -14,7 +14,7 @@ document = '''
 
 index_name = "document"
 
-index = ks.create_or_get_index(index_name)
+index = ks.index(index_name)
 
 document_id = index.index(document)
 
