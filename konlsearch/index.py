@@ -112,6 +112,7 @@ class KonlIndex:
         return KonlIndex.is_alpha(token) or KonlIndex.is_hangul(token)
 
 
+# noinspection PyBroadException
 class KonlIndexFactory:
     @staticmethod
     def create(db, name) -> KonlIndex:
@@ -128,3 +129,10 @@ class KonlIndexFactory:
         index._cf = db.get_column_family(name)
         index._cf_inverted_index = db.get_column_family(KonlIndex.build_inverted_index_name(name))
         return index
+
+    @staticmethod
+    def create_or_get(db, name) -> KonlIndex:
+        try:
+            return KonlIndexFactory.create(db, name)
+        except:
+            return KonlIndexFactory.get(db, name)

@@ -14,11 +14,7 @@ document = '''
 
 index_name = "document"
 
-# noinspection PyBroadException
-try:
-    index = ks.create_index(index_name)
-except:
-    index = ks.get_index(index_name)
+index = ks.create_or_get_index(index_name)
 
 document_id = index.index(document)
 

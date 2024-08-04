@@ -18,4 +18,7 @@ class KonlSearch:
     def create_index(self, name) -> KonlIndex:
         return KonlIndexFactory.create(self.db, name)
 
+    def create_or_get_index(self, name) -> KonlIndex:
+        return KonlIndexFactory.create_or_get(self.db, name)
+
 # class SearchOption(enum.Enum):
