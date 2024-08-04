@@ -27,12 +27,9 @@ class KonlIndex:
 
         self._cf["last_document_id"] = last_document_id
         self._cf[last_document_id] = document
-        self._cf[self.__build_token_name(last_document_id)] = tokens
+        self._cf[self.__build_token_name(last_document_id)] = [token for token in tokens if self.is_indexable(token)]
 
         for token in tokens:
-            if not self.is_indexable(token):
-                continue
-
             if token in self._cf_inverted_index:
                 self._cf_inverted_index[token] = self._cf_inverted_index[token] | set([last_document_id])
             else:
@@ -53,9 +50,6 @@ class KonlIndex:
         tokens = self._cf[token_name]
 
         for token in tokens:
-            if not self.is_indexable(token):
-                continue
-
             self._cf_inverted_index[token] = self._cf_inverted_index[token] - set([document_id])
 
             if not self._cf_inverted_index[token]:
