@@ -65,7 +65,7 @@ class KonlSearch:
         tokens = cf[token_name]
 
         for token in tokens:
-            cf_inverted[token].remove(document_id)
+            cf_inverted[token] = cf_inverted[token] - set([document_id])
 
             if not cf_inverted[token]:
                 cf_inverted.delete(token)
