@@ -10,13 +10,13 @@ mecab = mecab.MeCab()
 
 class KonlIndex:
     def __init__(self):
-        self.index_name = None
+        self._index_name = None
         self._cf = None
         self._cf_inverted_index = None
-        self.locks = NamedLock()
+        self._locks = NamedLock()
 
     def index(self, document) -> int:
-        self.locks.acquire(self.index_name)
+        self._locks.acquire(self._index_name)
 
         tokens = set(mecab.morphs(document))
 
@@ -35,15 +35,15 @@ class KonlIndex:
             else:
                 self._cf_inverted_index[token] = set([last_document_id])
 
-        self.locks.release(self.index_name)
+        self._locks.release(self._index_name)
 
         return last_document_id
 
     def delete(self, document_id) -> None:
-        self.locks.acquire(self.index_name)
+        self._locks.acquire(self._index_name)
 
         if document_id not in self._cf:
-            self.locks.release(self.index_name)
+            self._locks.release(self._index_name)
             raise KeyError
 
         token_name = self.__build_token_name(document_id)
@@ -58,7 +58,7 @@ class KonlIndex:
         self._cf.delete(token_name)
         self._cf.delete(document_id)
 
-        self.locks.release(self.index_name)
+        self._locks.release(self._index_name)
 
     def get(self, document_id) -> str:
         return self._cf[document_id]
@@ -117,7 +117,7 @@ class KonlIndexFactory:
     @staticmethod
     def create(db, name) -> KonlIndex:
         index = KonlIndex()
-        index.index_name = name
+        index._index_name = name
         index._cf = db.create_column_family(name)
         index._cf_inverted_index = db.create_column_family(KonlIndex.build_inverted_index_name(name))
         return index
@@ -125,7 +125,7 @@ class KonlIndexFactory:
     @staticmethod
     def get(db, name) -> KonlIndex:
         index = KonlIndex()
-        index.index_name = name
+        index._index_name = name
         index._cf = db.get_column_family(name)
         index._cf_inverted_index = db.get_column_family(KonlIndex.build_inverted_index_name(name))
         return index
