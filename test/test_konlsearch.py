@@ -19,3 +19,5 @@ ks.create_index(index_name)
 document_id = ks.index(index_name, document)
 
 print(document_id, ks.get(index_name, document_id))
+
+ks.delete(index_name, document_id)
