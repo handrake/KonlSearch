@@ -14,10 +14,14 @@ document = '''
 
 index_name = "document"
 
-ks.create_index(index_name)
+# noinspection PyBroadException
+try:
+    index = ks.create_index(index_name)
+except:
+    index = ks.get_index(index_name)
 
-document_id = ks.index(index_name, document)
+document_id = index.index(document)
 
-print(document_id, ks.get(index_name, document_id))
+print(document_id, index.get(document_id))
 
-ks.delete(index_name, document_id)
+index.delete(document_id)
