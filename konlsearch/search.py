@@ -1,4 +1,5 @@
 import typing
+import re
 import enum
 import rocksdict
 import mecab
@@ -42,6 +43,9 @@ class KonlSearch:
         cf[self.__build_token_name(last_document_id)] = tokens
 
         for token in tokens:
+            if not self.is_indexable(token):
+                continue
+
             if token in cf_inverted:
                 cf_inverted[token] = cf_inverted[token] | set([last_document_id])
             else:
@@ -65,6 +69,9 @@ class KonlSearch:
         tokens = cf[token_name]
 
         for token in tokens:
+            if not self.is_indexable(token):
+                continue
+
             cf_inverted[token] = cf_inverted[token] - set([document_id])
 
             if not cf_inverted[token]:
@@ -115,5 +122,20 @@ class KonlSearch:
     @staticmethod
     def __build_token_name(document_id) -> str:
         return f'{document_id}:tokens'
+
+    @staticmethod
+    def is_hangul(s) -> bool:
+        p = re.compile('[가-힣]+')
+        return p.fullmatch(s) is not None
+
+    @staticmethod
+    def is_alpha(s) -> bool:
+        p = re.compile('[a-zA-Z]+')
+        return p.fullmatch(s) is not None
+
+    @staticmethod
+    def is_indexable(token):
+        return KonlSearch.is_alpha(token) or KonlSearch.is_hangul(token)
+
 
 # class SearchOption(enum.Enum):
