@@ -20,4 +20,7 @@ document_id = index.index(document)
 
 print(document_id, index.get(document_id))
 
-index.delete(document_id)
+index.close()
+
+ks.close()
+ks.destroy()

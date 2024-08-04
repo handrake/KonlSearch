@@ -15,4 +15,10 @@ class KonlSearch:
     def index(self, name) -> KonlIndex:
         return KonlIndexFactory.create_or_get(self.db, name)
 
+    def close(self):
+        self.db.close()
+
+    def destroy(self):
+        rocksdict.Rdict.destroy(self.path)
+
 # class SearchOption(enum.Enum):

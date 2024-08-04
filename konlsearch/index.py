@@ -89,6 +89,10 @@ class KonlIndex:
 
         return result
 
+    def close(self):
+        self._cf.close()
+        self._cf_inverted_index.close()
+
     @staticmethod
     def __build_token_name(document_id) -> str:
         return f'{document_id}:tokens'
