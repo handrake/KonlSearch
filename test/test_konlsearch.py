@@ -1,4 +1,5 @@
 from konlsearch.search import KonlSearch
+from konlsearch.index import TokenSearchMode
 
 ks = KonlSearch("./test-db")
 
@@ -19,6 +20,8 @@ index = ks.index(index_name)
 document_id = index.index(document)
 
 print(document_id, index.get(document_id))
+
+print(index.search(["공식", "와타리"], TokenSearchMode.AND))
 
 index.close()
 

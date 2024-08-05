@@ -1,11 +1,17 @@
 import re
 import typing
+import enum
 
 import mecab
 
 from .lock import NamedLock
 
 mecab = mecab.MeCab()
+
+
+class TokenSearchMode(enum.StrEnum):
+    AND = enum.auto()
+    OR = enum.auto()
 
 
 class KonlIndex:
@@ -67,18 +73,24 @@ class KonlIndex:
         return self._cf[self.__build_token_name(document_id)]
 
     # noinspection PyBroadException
-    def search(self, tokens) -> typing.List[int]:
+    def search(self, tokens: typing.List[int], mode: TokenSearchMode) -> typing.List[int]:
         inverted_snapshot = self._cf_inverted_index.snapshot()
 
         result_set = set()
 
-        for token in tokens:
+        for i, token in enumerate(tokens):
             try:
                 document_ids = inverted_snapshot[token]
             except Exception:
                 document_ids = set()
 
-            result_set.update(document_ids)
+            if mode == TokenSearchMode.OR:
+                result_set.update(document_ids)
+            elif mode == TokenSearchMode.AND:
+                if i == 0:
+                    result_set.update(document_ids)
+                else:
+                    result_set.intersection_update(document_ids)
 
         del inverted_snapshot
 
