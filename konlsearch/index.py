@@ -70,7 +70,6 @@ class KonlIndex:
     def search(self, tokens) -> typing.List[int]:
         inverted_snapshot = self._cf_inverted_index.snapshot()
 
-        result = []
         result_set = set()
 
         for token in tokens:
@@ -79,15 +78,11 @@ class KonlIndex:
             except Exception:
                 document_ids = set()
 
-            diff = document_ids.difference(result_set)
-
-            if diff:
-                result_set.update(document_ids)
-                result.extend(list(diff))
+            result_set.update(document_ids)
 
         del inverted_snapshot
 
-        return result
+        return list(result_set)
 
     def close(self):
         self._cf.close()
