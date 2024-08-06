@@ -37,7 +37,7 @@ class KonlIndex:
 
         for token in tokens:
             if token in self._cf_inverted_index:
-                self._cf_inverted_index[token] = self._cf_inverted_index[token] | {last_document_id}
+                self._cf_inverted_index[token] |= {last_document_id}
             else:
                 self._cf_inverted_index[token] = {last_document_id}
 
@@ -56,7 +56,7 @@ class KonlIndex:
         tokens = self._cf[token_name]
 
         for token in tokens:
-            self._cf_inverted_index[token] = self._cf_inverted_index[token] - {document_id}
+            self._cf_inverted_index[token] -= {document_id}
 
             if not self._cf_inverted_index[token]:
                 self._cf_inverted_index.delete(token)
