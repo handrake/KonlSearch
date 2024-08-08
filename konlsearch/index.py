@@ -15,6 +15,9 @@ class TokenSearchMode(enum.StrEnum):
     OR = enum.auto()
 
 
+SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
+
+
 class KonlIndex:
     def __init__(self):
         self._index_name = None
@@ -24,7 +27,9 @@ class KonlIndex:
 
     def index(self, document) -> int:
         with self._locks.get(self._index_name):
-            tokens = {token for token in set(mecab.morphs(document)).union(set(document.split())) if self.is_indexable(token)}
+            sanitized_document = self.sanitize(document)
+            tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
+                      if self.is_indexable(token)}
 
             last_document_id = 1
 
@@ -115,6 +120,10 @@ class KonlIndex:
     @staticmethod
     def is_indexable(token):
         return KonlIndex.is_alpha(token) or KonlIndex.is_hangul(token)
+
+    @staticmethod
+    def sanitize(document):
+        return ''.join(ch for ch in document if ch not in SPECIAL_CHARACTERS)
 
 
 # noinspection PyBroadException
