@@ -24,7 +24,7 @@ class KonlIndex:
     def index(self, document) -> int:
         self._locks.acquire(self._index_name)
 
-        tokens = set(mecab.morphs(document))
+        tokens = {token for token in set(mecab.morphs(document)).union(set(document.split())) if self.is_indexable(token)}
 
         last_document_id = 1
 
@@ -33,7 +33,7 @@ class KonlIndex:
 
         self._cf["last_document_id"] = last_document_id
         self._cf[last_document_id] = document
-        self._cf[self.__build_token_name(last_document_id)] = [token for token in tokens if self.is_indexable(token)]
+        self._cf[self.__build_token_name(last_document_id)] = list(tokens)
 
         for token in tokens:
             if token in self._cf_inverted_index:
