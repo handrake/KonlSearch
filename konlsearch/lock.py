@@ -1,18 +1,18 @@
 import threading
-import collections
+
+from typing import Union
+
+type AbcLock = Union[threading.Lock, threading.RLock]
+type LockType = Union[type(threading.Lock), type(threading.RLock)]
 
 
-class NamedLock:
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.locks = collections.defaultdict(threading.Lock)
+class StripedLock:
+    def __init__(self, lock_type: LockType, stripes: int):
+        self._locks = [lock_type() for _ in range(stripes)]
+        self.size = stripes
 
-    def acquire(self, name):
-        with self.lock:
-            lock = self.locks[name]
-        lock.acquire()
+    def __getitem__(self, index: int) -> AbcLock:
+        return self._locks[index]
 
-    def release(self, name):
-        with self.lock:
-            lock = self.locks[name]
-        lock.release()
+    def get(self, s: str) -> AbcLock:
+        return self._locks[hash(s) % self.size]
