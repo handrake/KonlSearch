@@ -93,7 +93,7 @@ class KonlIndex:
 
         del inverted_snapshot
 
-        return list(result_set)
+        return sorted(list(result_set))
 
     def close(self):
         self._cf.close()
