@@ -5,6 +5,7 @@ import enum
 from . import utility
 
 from .trie import KonlTrie
+from .set import KonlSet
 
 
 class TokenSearchMode(enum.StrEnum):
@@ -19,14 +20,15 @@ class KonlInvertedIndex:
         self._cf = utility.create_or_get_cf(db, self._name)
         self._trie = KonlTrie(db, name)
 
-    def __getitem__(self, token: str) -> typing.Set[str]:
-        if token in self._cf:
-            return self._cf[token]
-        else:
-            return set()
+    def __getitem__(self, token: str) -> typing.Set[int]:
+        s = KonlSet(self._cf, token)
+
+        return {int(e) for e in s.items()}
 
     def __contains__(self, token: str) -> bool:
-        return token in self._cf
+        s = KonlSet(self._cf, token)
+
+        return len(s) > 0
 
     def close(self):
         self._cf.close()
@@ -34,20 +36,18 @@ class KonlInvertedIndex:
 
     def index(self, document_id: int, tokens: typing.Set[str]):
         for token in tokens:
-            if token in self._cf:
-                self._cf[token] |= {document_id}
-            else:
-                self._cf[token] = {document_id}
+            s = KonlSet(self._cf, token)
+            s.add(str(document_id))
+
             self._trie.insert(token)
 
     def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
         for token in tokens:
-            if token in self._cf:
-                self._cf[token] -= {document_id}
+            s = KonlSet(self._cf, token)
+            s.remove(str(document_id))
 
-                if not self._cf[token]:
-                    self._cf.delete(token)
-                    self._trie.delete(token)
+            if len(s) == 0:
+                self._trie.delete(token)
 
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
@@ -56,10 +56,9 @@ class KonlInvertedIndex:
         result_set = set()
 
         for i, token in enumerate(tokens):
-            try:
-                document_ids = snapshot[token]
-            except Exception:
-                document_ids = set()
+            s = KonlSet(snapshot, token)
+
+            document_ids = {int(e) for e in s.items()}
 
             if mode == TokenSearchMode.OR:
                 result_set.update(document_ids)
