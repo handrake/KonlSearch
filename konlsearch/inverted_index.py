@@ -4,6 +4,8 @@ import enum
 
 from . import utility
 
+from .trie import KonlTrie
+
 
 class TokenSearchMode(enum.StrEnum):
     AND = enum.auto()
@@ -15,6 +17,7 @@ class KonlInvertedIndex:
         self._db = db
         self._name = self.__build_inverted_index_name(name)
         self._cf = utility.create_or_get_cf(db, self._name)
+        self._trie = KonlTrie(db, name)
 
     def __getitem__(self, token: str) -> typing.Set[str]:
         if token in self._cf:
@@ -27,6 +30,7 @@ class KonlInvertedIndex:
 
     def close(self):
         self._cf.close()
+        self._trie.close()
 
     def index(self, document_id: int, tokens: typing.Set[str]):
         for token in tokens:
@@ -34,6 +38,7 @@ class KonlInvertedIndex:
                 self._cf[token] |= {document_id}
             else:
                 self._cf[token] = {document_id}
+            self._trie.insert(token)
 
     def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
         for token in tokens:
@@ -42,6 +47,7 @@ class KonlInvertedIndex:
 
                 if not self._cf[token]:
                     self._cf.delete(token)
+                    self._trie.delete(token)
 
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
@@ -66,6 +72,9 @@ class KonlInvertedIndex:
         del snapshot
 
         return sorted(list(result_set))
+
+    def search_suggestions(self, prefix: str) -> typing.List[str]:
+        return self._trie.search(prefix)
 
     @staticmethod
     def __build_inverted_index_name(name: str) -> str:

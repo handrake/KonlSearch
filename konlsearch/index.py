@@ -66,6 +66,9 @@ class KonlIndex:
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
         return self._inverted_index.search(tokens, mode)
 
+    def search_suggestions(self, prefix: str) -> typing.List[str]:
+        return self._inverted_index.search_suggestions(prefix)
+
     def close(self):
         self._cf.close()
         self._inverted_index.close()

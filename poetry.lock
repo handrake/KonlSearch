@@ -12,6 +12,16 @@ files = [
 ]
 
 [[package]]
+name = "hgtk"
+version = "0.2.1"
+description = "Toolkit for Hangul composing, decomposing and etc..."
+optional = false
+python-versions = "*"
+files = [
+    {file = "hgtk-0.2.1-py2.py3-none-any.whl", hash = "sha256:f3e33dacf6ab2564f6257418b718e2c7a4ae9fffa32e18d6c4f6278b72ba73ee"},
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
@@ -185,4 +195,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "3dcc6f2f800e75df208cddb836b43f151951be74e4e088bf0abe4e997e5904ff"
+content-hash = "2f14c412928d7dc29c12408c19af438cb35766eb8587b726316a5d928c1cdc2a"

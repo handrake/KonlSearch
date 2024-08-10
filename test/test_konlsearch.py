@@ -196,3 +196,11 @@ def test_inverted_index_delete(index):
     inverted.delete(38, {token})
 
     assert token not in inverted
+
+
+def test_trie_suggestion(index):
+    prefix = "특"
+
+    suggestions = index.search_suggestions(prefix)
+
+    assert suggestions == ["특급", "특별", "특별해야"]
