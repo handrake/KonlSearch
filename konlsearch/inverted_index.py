@@ -35,7 +35,7 @@ class KonlInvertedIndex:
                 self._cf.delete(token)
 
     # noinspection PyBroadException
-    def search(self, tokens: typing.List[int], mode: TokenSearchMode) -> typing.List[int]:
+    def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
         snapshot = self._cf.snapshot()
 
         result_set = set()
