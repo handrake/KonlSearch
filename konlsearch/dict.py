@@ -58,8 +58,7 @@ class KonlDict:
 
     def update(self, d: typing.Dict):
         for k, v in d.items():
-            key = self.__build_key_name(k)
-            self._cf[key] = v
+            self.__setitem__(k, v)
 
     def __build_key_name(self, k: str) -> str:
         return f'{self._prefix}:{k}'
