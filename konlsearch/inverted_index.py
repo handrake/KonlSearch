@@ -19,14 +19,14 @@ class KonlInvertedIndex:
     def close(self):
         self._cf.close()
 
-    def index(self, document_id: int, tokens: typing.List[str]):
+    def index(self, document_id: int, tokens: typing.Set[str]):
         for token in tokens:
             if token in self._cf:
                 self._cf[token] |= {document_id}
             else:
                 self._cf[token] = {document_id}
 
-    def delete(self, document_id: int, tokens: typing.List[str]) -> None:
+    def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
         for token in tokens:
             if token in self._cf:
                 self._cf[token] -= {document_id}

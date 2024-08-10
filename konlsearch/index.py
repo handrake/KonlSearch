@@ -37,7 +37,7 @@ class KonlIndex:
 
             self._cf[_LAST_DOCUMENT_ID] = last_document_id
             self._cf[last_document_id] = document
-            self._cf[self.__build_token_name(last_document_id)] = list(tokens)
+            self._cf[self.__build_token_name(last_document_id)] = tokens
 
             self._inverted_index.index(last_document_id, tokens)
 
