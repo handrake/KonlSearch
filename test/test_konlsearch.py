@@ -181,3 +181,15 @@ def test_search_mode_and(index):
     document_ids = index.search(["마법", "특별"], TokenSearchMode.AND)
 
     assert document_ids == [9]
+
+
+def test_inverted_index_delete(index):
+    token = "다이아몬드"
+
+    inverted = index._inverted_index
+
+    assert inverted._cf[token] == {38}
+
+    inverted.delete(38, {token})
+
+    assert inverted._cf[token] == set()

@@ -31,9 +31,6 @@ class KonlInvertedIndex:
             if token in self._cf:
                 self._cf[token] -= {document_id}
 
-            if not self._cf[token]:
-                self._cf.delete(token)
-
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
         snapshot = self._cf.snapshot()
