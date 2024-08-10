@@ -188,8 +188,8 @@ def test_inverted_index_delete(index):
 
     inverted = index._inverted_index
 
-    assert inverted._cf[token] == {38}
+    assert inverted[token] == {38}
 
     inverted.delete(38, {token})
 
-    assert inverted._cf[token] == set()
+    assert inverted[token] == set()

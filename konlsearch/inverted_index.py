@@ -16,6 +16,9 @@ class KonlInvertedIndex:
         self._name = self.__build_inverted_index_name(name)
         self._cf = utility.create_or_get_cf(db, self._name)
 
+    def __getitem__(self, token) -> typing.Set[str]:
+        return self._cf[token]
+
     def close(self):
         self._cf.close()
 
