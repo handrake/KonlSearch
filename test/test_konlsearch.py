@@ -1,7 +1,7 @@
 from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
 
-ks = KonlSearch("./test-db")
+import pytest
 
 title_document = '''
 거신병 도쿄에 나타나다
@@ -138,21 +138,46 @@ My Life as a Teenage Robot
 SEX로 레벨업! 만렙은 어디까지?!
 '''
 
-titles = [title for title in title_document.split("\n") if title != '']
 
-index_name = "title"
+@pytest.fixture
+def konl_search():
+    ks = KonlSearch("./test-db")
 
-index = ks.index(index_name)
+    yield ks
 
-for title in titles:
-    document_id = index.index(title)
+    ks.close()
+    ks.destroy()
 
-document_ids = index.search(["같은"], TokenSearchMode.AND)
 
-for document_id in document_ids:
-    print(f'document_id: {document_id}, title: {index.get(document_id)}')
+@pytest.fixture
+def index(konl_search):
+    titles = [title for title in title_document.split("\n") if title != '']
 
-index.close()
+    print("\n")
 
-ks.close()
-ks.destroy()
+    for i, title in enumerate(titles):
+        print(f'{i+1}: {title}')
+
+    print("\n")
+
+    index_name = "title"
+    index = konl_search.index(index_name)
+
+    for title in titles:
+        index.index(title)
+
+    yield index
+
+    index.close()
+
+
+def test_search_mode_or(index):
+    document_ids = index.search(["같은", "비스크"], TokenSearchMode.OR)
+
+    assert document_ids == [10, 18, 81]
+
+
+def test_search_mode_and(index):
+    document_ids = index.search(["마법", "특별"], TokenSearchMode.AND)
+
+    assert document_ids == [9]
