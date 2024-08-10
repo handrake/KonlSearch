@@ -12,7 +12,8 @@ from .lock import StripedLock
 mecab = mecab.MeCab()
 
 
-SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
+_SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
+_LAST_DOCUMENT_ID = "last_document_id"
 
 
 class KonlIndex:
@@ -31,10 +32,10 @@ class KonlIndex:
 
             last_document_id = 1
 
-            if "last_document_id" in self._cf:
-                last_document_id = self._cf["last_document_id"] + 1
+            if _LAST_DOCUMENT_ID in self._cf:
+                last_document_id = self._cf[_LAST_DOCUMENT_ID] + 1
 
-            self._cf["last_document_id"] = last_document_id
+            self._cf[_LAST_DOCUMENT_ID] = last_document_id
             self._cf[last_document_id] = document
             self._cf[self.__build_token_name(last_document_id)] = list(tokens)
 
@@ -89,4 +90,4 @@ class KonlIndex:
 
     @staticmethod
     def sanitize(document):
-        return ''.join(ch for ch in document if ch not in SPECIAL_CHARACTERS)
+        return ''.join(ch for ch in document if ch not in _SPECIAL_CHARACTERS)
