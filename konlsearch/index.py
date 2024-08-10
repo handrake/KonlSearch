@@ -4,7 +4,9 @@ import enum
 import threading
 
 import mecab
+import rocksdict
 
+from . import utility
 from .lock import StripedLock
 
 mecab = mecab.MeCab()
@@ -19,14 +21,15 @@ SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
 
 
 class KonlIndex:
-    def __init__(self):
-        self._index_name = None
-        self._cf = None
-        self._cf_inverted_index = None
+    def __init__(self, db: rocksdict.Rdict, name: str):
+        self._db = db
+        self._name = name
+        self._cf = utility.create_or_get_cf(db, name)
+        self._cf_inverted_index = utility.create_or_get_cf(db, self.build_inverted_index_name(name))
         self._locks = StripedLock(threading.Lock, 10)
 
     def index(self, document) -> int:
-        with self._locks.get(self._index_name):
+        with self._locks.get(self._name):
             sanitized_document = self.sanitize(document)
             tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
                       if self.is_indexable(token)}
@@ -49,7 +52,7 @@ class KonlIndex:
         return last_document_id
 
     def delete(self, document_id) -> None:
-        with self._locks.get(self._index_name):
+        with self._locks.get(self._name):
             if document_id not in self._cf:
                 raise KeyError
 
@@ -124,29 +127,3 @@ class KonlIndex:
     @staticmethod
     def sanitize(document):
         return ''.join(ch for ch in document if ch not in SPECIAL_CHARACTERS)
-
-
-# noinspection PyBroadException
-class KonlIndexFactory:
-    @staticmethod
-    def create(db, name) -> KonlIndex:
-        index = KonlIndex()
-        index._index_name = name
-        index._cf = db.create_column_family(name)
-        index._cf_inverted_index = db.create_column_family(KonlIndex.build_inverted_index_name(name))
-        return index
-
-    @staticmethod
-    def get(db, name) -> KonlIndex:
-        index = KonlIndex()
-        index._index_name = name
-        index._cf = db.get_column_family(name)
-        index._cf_inverted_index = db.get_column_family(KonlIndex.build_inverted_index_name(name))
-        return index
-
-    @staticmethod
-    def create_or_get(db, name) -> KonlIndex:
-        try:
-            return KonlIndexFactory.create(db, name)
-        except:
-            return KonlIndexFactory.get(db, name)

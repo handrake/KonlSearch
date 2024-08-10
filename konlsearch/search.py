@@ -1,6 +1,6 @@
 import rocksdict
 
-from .index import KonlIndex, KonlIndexFactory
+from .index import KonlIndex
 
 
 class KonlSearch:
@@ -12,7 +12,7 @@ class KonlSearch:
         self.db = rocksdict.Rdict(path=self.path, options=self.options)
 
     def index(self, name) -> KonlIndex:
-        return KonlIndexFactory.create_or_get(self.db, name)
+        return KonlIndex(self.db, name)
 
     def close(self):
         self.db.close()
