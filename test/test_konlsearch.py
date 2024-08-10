@@ -1,5 +1,7 @@
 from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
+from konlsearch.set import KonlSet
+from konlsearch.dict import KonlDict
 
 import pytest
 
@@ -196,6 +198,63 @@ def test_inverted_index_delete(index):
     inverted.delete(38, {token})
 
     assert token not in inverted
+
+
+def test_set(index):
+    s = KonlSet(index._cf, "test")
+
+    s.add("1")
+    s.add("2")
+    s.add("3")
+
+    assert list(s.items()) == ["1", "2", "3"]
+    assert len(s) == 3
+
+    s.remove("1")
+
+    assert list(s.items()) == ["2", "3"]
+    assert len(s) == 2
+
+    s.remove("1")
+
+    assert list(s.items()) == ["2", "3"]
+    assert len(s) == 2
+
+    s.remove("2")
+
+    assert list(s.items()) == ["3"]
+    assert len(s) == 1
+
+    s.remove("3")
+
+    assert list(s.items()) == []
+    assert len(s) == 0
+
+
+def test_dict(index):
+    d = KonlDict(index._cf, "test")
+
+    d["a"] = "1"
+    d["b"] = "2"
+    d["c"] = "3"
+
+    assert list(d.items()) == [("a", "1"), ("b", "2"), ("c", "3")]
+    assert len(d) == 3
+
+    del d["a"]
+
+    assert list(d.items()) == [("b", "2"), ("c", "3")]
+    assert len(d) == 2
+
+    del d["c"]
+
+    assert list(d.items()) == [("b", "2")]
+    assert len(d) == 1
+
+    del d["b"]
+
+    assert list(d.items()) == []
+    assert len(d) == 0
 
 
 def test_trie_suggestion(index):
