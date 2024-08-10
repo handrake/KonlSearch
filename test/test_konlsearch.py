@@ -138,6 +138,18 @@ My Life as a Teenage Robot
 SEX로 레벨업! 만렙은 어디까지?!
 '''
 
+titles = [title for title in title_document.split("\n") if title != '']
+
+
+@pytest.fixture(scope="session", autouse=True)
+def print_titles():
+    print("\n")
+
+    for i, title in enumerate(titles):
+        print(f'{i+1}: {title}')
+
+    print("\n")
+
 
 @pytest.fixture
 def konl_search():
@@ -151,15 +163,6 @@ def konl_search():
 
 @pytest.fixture
 def index(konl_search):
-    titles = [title for title in title_document.split("\n") if title != '']
-
-    print("\n")
-
-    for i, title in enumerate(titles):
-        print(f'{i+1}: {title}')
-
-    print("\n")
-
     index_name = "title"
     index = konl_search.index(index_name)
 
