@@ -40,7 +40,7 @@ class KonlTrie:
                 self._cf[s] = set()
 
             if len(s) >= 2:
-                self._cf[s[:-1]] |= set([s])
+                self._cf[s[:-1]] |= {s}
 
         token_dict[token] = decomposed_token
         token_reverse_dict[decomposed_token] = token
