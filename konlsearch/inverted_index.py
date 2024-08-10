@@ -16,8 +16,14 @@ class KonlInvertedIndex:
         self._name = self.__build_inverted_index_name(name)
         self._cf = utility.create_or_get_cf(db, self._name)
 
-    def __getitem__(self, token) -> typing.Set[str]:
-        return self._cf[token]
+    def __getitem__(self, token: str) -> typing.Set[str]:
+        if token in self._cf:
+            return self._cf[token]
+        else:
+            return set()
+
+    def __contains__(self, token: str) -> bool:
+        return token in self._cf
 
     def close(self):
         self._cf.close()
@@ -33,6 +39,9 @@ class KonlInvertedIndex:
         for token in tokens:
             if token in self._cf:
                 self._cf[token] -= {document_id}
+
+                if not self._cf[token]:
+                    self._cf.delete(token)
 
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:

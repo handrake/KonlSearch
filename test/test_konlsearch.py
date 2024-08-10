@@ -192,4 +192,4 @@ def test_inverted_index_delete(index):
 
     inverted.delete(38, {token})
 
-    assert inverted[token] == set()
+    assert token not in inverted
