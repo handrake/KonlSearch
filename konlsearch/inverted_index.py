@@ -51,12 +51,10 @@ class KonlInvertedIndex:
 
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
-        snapshot = self._cf.snapshot()
-
         result_set = set()
 
         for i, token in enumerate(tokens):
-            s = KonlSet(snapshot, token)
+            s = KonlSet(self._cf, token)
 
             document_ids = {int(e) for e in s.items()}
 
@@ -67,8 +65,6 @@ class KonlInvertedIndex:
                     result_set.update(document_ids)
                 else:
                     result_set.intersection_update(document_ids)
-
-        del snapshot
 
         return sorted(list(result_set))
 
