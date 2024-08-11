@@ -27,3 +27,8 @@ This project aims to implement a minimal database that can be used as an embedde
 >>> ks.close()
 >>> ks.destroy() # deletes db
 ```
+
+## Acknowledgements
+
+- KonlSearch relies on [python-mecab-ko](https://github.com/jonghwanhyeon/python-mecab-ko) for tokenizing and [hangul-toolkit](https://github.com/bluedisk/hangul-toolkit) for decomposing Korean characters into consonants and vowels.
+- [RocksDB](https://github.com/facebook/rocksdb) is used as a storage engine and [RocksDict](https://github.com/Congyuwang/RocksDict) for RockDB Python binding
