@@ -16,6 +16,11 @@ _SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
 _LAST_DOCUMENT_ID = "last_document_id"
 
 
+class IndexGetResponseType(typing.TypedDict):
+    id: int
+    document: str
+
+
 class KonlIndex:
     def __init__(self, db: rocksdict.Rdict, name: str):
         self._db = db
@@ -38,7 +43,10 @@ class KonlIndex:
                 last_document_id = self._cf[_LAST_DOCUMENT_ID] + 1
 
             self._cf[_LAST_DOCUMENT_ID] = last_document_id
-            self._cf[last_document_id] = document
+
+            key = self.__build_key_name(last_document_id)
+
+            self._cf[key] = document
             self._cf[self.__build_token_name(last_document_id)] = tokens
             size = self.__len__()
             self.__set_len(size+1)
@@ -49,7 +57,9 @@ class KonlIndex:
 
     def delete(self, document_id) -> None:
         with self._locks.get(self._name):
-            if document_id not in self._cf:
+            document_id_key = self.__build_key_name(document_id)
+
+            if document_id_key not in self._cf:
                 raise KeyError
 
             token_name = self.__build_token_name(document_id)
@@ -58,13 +68,29 @@ class KonlIndex:
             self._inverted_index.delete(document_id, tokens)
 
             self._cf.delete(token_name)
-            self._cf.delete(document_id)
+
+            document_id_key = self.__build_key_name(document_id)
+            self._cf.delete(document_id_key)
+
             size = self.__len__()
             if size > 0:
                 self.__set_len(size-1)
 
-    def get(self, document_id) -> str:
-        return self._cf[document_id]
+    def get(self, document_id) -> IndexGetResponseType:
+        return IndexGetResponseType(id=document_id, document=self._cf[document_id])
+
+    def get_all(self) -> typing.List[IndexGetResponseType]:
+        it = self._cf.iter()
+        it.seek(self._prefix)
+
+        result = []
+
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+            r = IndexGetResponseType(id=int(self.__remove_prefix(it.key())), document=it.value())
+            result.append(r)
+            it.next()
+
+        return result
 
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.__build_token_name(document_id)]
@@ -91,13 +117,15 @@ class KonlIndex:
     def __set_len(self, size: int):
         self._cf[self._len_prefix] = size
 
+    def __remove_prefix(self, key_with_prefix: str) -> str:
+        return key_with_prefix.replace(self._prefix + ":", "")
+
+    def __build_key_name(self, document_id) -> str:
+        return f'{self._prefix}:{document_id}'
+
     @staticmethod
     def __build_token_name(document_id) -> str:
         return f'{document_id}:tokens'
-
-    @staticmethod
-    def __build_key_name(document_id) -> str:
-        return f'document:{document_id}'
 
     @staticmethod
     def is_hangul(s) -> bool:

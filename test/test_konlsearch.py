@@ -192,6 +192,15 @@ def test_index_len(index):
     assert len(index) == 132
 
 
+def test_index_get_all(index):
+    result = index.get_all()
+
+    index.delete(10)
+    index.delete(12)
+
+    assert len(result) == 132 and len(index) == 130
+
+
 def test_inverted_index_delete(index):
     token = "다이아몬드"
 
