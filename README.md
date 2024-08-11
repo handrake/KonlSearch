@@ -1,4 +1,5 @@
 # KonlSearch: Korean Natural Language Search Engine
+![Tests](https://github.com/handrake/KonlSearch/actions/workflows/tests.yml/badge.svg?branch=master)
 
 This project aims to implement a minimal database that can be used as an embedded search engine.
 
