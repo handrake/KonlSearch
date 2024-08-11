@@ -77,7 +77,8 @@ class KonlIndex:
                 self.__set_len(size-1)
 
     def get(self, document_id) -> IndexGetResponseType:
-        return IndexGetResponseType(id=document_id, document=self._cf[document_id])
+        document_id_key = self.__build_key_name(document_id)
+        return IndexGetResponseType(id=document_id, document=self._cf[document_id_key])
 
     def get_all(self) -> typing.List[IndexGetResponseType]:
         it = self._cf.iter()
