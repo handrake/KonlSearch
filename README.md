@@ -36,3 +36,7 @@ More internal and advanced usage can be found under [test/test_konlsearch.py](te
 
 - KonlSearch relies on [python-mecab-ko](https://github.com/jonghwanhyeon/python-mecab-ko) for tokenizing and [hangul-toolkit](https://github.com/bluedisk/hangul-toolkit) for decomposing Korean characters into consonants and vowels.
 - [RocksDB](https://github.com/facebook/rocksdb) is used as a storage engine and [RocksDict](https://github.com/Congyuwang/RocksDict) for RockDB Python binding
+
+## License
+ 
+- [Apache-2.0](LICENSE)
