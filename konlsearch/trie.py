@@ -65,9 +65,9 @@ class KonlTrie:
     def search(self, prefix: str) -> typing.List[str]:
         decomposed_prefix = self.__decompose_word(prefix)
 
-        return sorted(self._search(decomposed_prefix))
+        return sorted(self.__search(decomposed_prefix))
 
-    def _search(self, decomposed_prefix: str) -> typing.Set[str]:
+    def __search(self, decomposed_prefix: str) -> typing.Set[str]:
         s = KonlSet(self._cf, decomposed_prefix)
 
         if len(s) == 0:
@@ -89,7 +89,7 @@ class KonlTrie:
             if candidate_prefix in self._token_reverse_dict:
                 result_set.add(self._token_reverse_dict[candidate_prefix])
 
-            result_set.update(self._search(candidate_prefix))
+            result_set.update(self.__search(candidate_prefix))
 
         return result_set
 
