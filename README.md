@@ -22,7 +22,7 @@ This project aims to implement a minimal database that can be used as an embedde
 [2, 3] # "마법소녀" is indexed in document 2, 3
 >>> index.search(["마법소녀", "적대"], TokenSearchMode.AND) # matches only documents that have both "마법소녀" and "적대"
 [3]
->>> index.search_suggestions("ㅈ") # searches all tokens that begins with 'ㅈ', useful for autocomplete
+>>> index.search_suggestions("ㅈ") # searches all tokens that begin with 'ㅈ', useful for autocomplete
 ['적대', '적대하고']
 >>> ks.close()
 >>> ks.destroy() # deletes db
@@ -38,5 +38,5 @@ More internal and advanced usage can be found under [test/test_konlsearch.py](te
 - [RocksDB](https://github.com/facebook/rocksdb) is used as a storage engine and [RocksDict](https://github.com/Congyuwang/RocksDict) for RockDB Python binding
 
 ## License
- 
+
 - [Apache-2.0](LICENSE)
