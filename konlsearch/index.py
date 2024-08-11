@@ -23,6 +23,8 @@ class KonlIndex:
         self._cf = utility.create_or_get_cf(db, name)
         self._inverted_index = KonlInvertedIndex(db, name)
         self._locks = StripedLock(threading.Lock, 10)
+        self._prefix = f'{name}:document'
+        self._len_prefix = f'{name}:__len__:document'
 
     def index(self, document) -> int:
         with self._locks.get(self._name):
@@ -38,6 +40,8 @@ class KonlIndex:
             self._cf[_LAST_DOCUMENT_ID] = last_document_id
             self._cf[last_document_id] = document
             self._cf[self.__build_token_name(last_document_id)] = tokens
+            size = self.__len__()
+            self.__set_len(size+1)
 
             self._inverted_index.index(last_document_id, tokens)
 
@@ -55,6 +59,9 @@ class KonlIndex:
 
             self._cf.delete(token_name)
             self._cf.delete(document_id)
+            size = self.__len__()
+            if size > 0:
+                self.__set_len(size-1)
 
     def get(self, document_id) -> str:
         return self._cf[document_id]
@@ -73,9 +80,24 @@ class KonlIndex:
         self._cf.close()
         self._inverted_index.close()
 
+    def __len__(self):
+        key = self._len_prefix
+
+        if key in self._cf:
+            return self._cf[key]
+        else:
+            return 0
+
+    def __set_len(self, size: int):
+        self._cf[self._len_prefix] = size
+
     @staticmethod
     def __build_token_name(document_id) -> str:
         return f'{document_id}:tokens'
+
+    @staticmethod
+    def __build_key_name(document_id) -> str:
+        return f'document:{document_id}'
 
     @staticmethod
     def is_hangul(s) -> bool:

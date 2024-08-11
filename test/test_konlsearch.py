@@ -188,6 +188,10 @@ def test_search_mode_and(index):
     assert document_ids == [9]
 
 
+def test_index_len(index):
+    assert len(index) == 132
+
+
 def test_inverted_index_delete(index):
     token = "다이아몬드"
 
