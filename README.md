@@ -28,6 +28,10 @@ This project aims to implement a minimal database that can be used as an embedde
 >>> ks.destroy() # deletes db
 ```
 
+## Usage
+
+More internal and advanced usage can be found under [test/test_konlsearch.py](test/test_konlsearch.py)
+
 ## Acknowledgements
 
 - KonlSearch relies on [python-mecab-ko](https://github.com/jonghwanhyeon/python-mecab-ko) for tokenizing and [hangul-toolkit](https://github.com/bluedisk/hangul-toolkit) for decomposing Korean characters into consonants and vowels.
