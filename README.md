@@ -11,7 +11,7 @@ This project aims to implement a minimal database that can be used as an embedde
 >>> index = ks.index("animation_title") # similar to creating DB
 >>> # KonlIndex.index() is like inserting into DB
 >>> index.index("귀환자의 마법은 특별해야 합니다")
-1 # document is indexed in document_id 1
+1 # A document is indexed with id=1
 >>> index.index("마법소녀 따위는 이제 됐으니까.")
 2
 >>> index.index("일찍이 마법소녀와 악은 적대하고 있었다.")
@@ -25,7 +25,7 @@ This project aims to implement a minimal database that can be used as an embedde
 >>> index.search_suggestions("ㅈ") # searches all tokens that begin with 'ㅈ', useful for autocomplete
 ['적대', '적대하고']
 >>> ks.close()
->>> ks.destroy() # deletes db
+>>> ks.destroy() # deletes DB
 ```
 
 ## Usage
