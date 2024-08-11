@@ -7,7 +7,7 @@ class KonlSet:
     def __init__(self, cf: rocksdict.Rdict, prefix: str):
         self._cf = cf
         self._prefix = f'{prefix}:set'
-        self._len_prefix = f'{prefix}:__len__:dict'
+        self._len_prefix = f'{prefix}:__len__:set'
 
     def __contains__(self, k: str) -> bool:
         key = self.__build_key_name(k)
