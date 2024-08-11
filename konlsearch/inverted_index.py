@@ -8,7 +8,7 @@ from .trie import KonlTrie
 from .set import KonlSet
 
 
-class TokenSearchMode(enum.StrEnum):
+class TokenSearchMode(enum.Flag):
     AND = enum.auto()
     OR = enum.auto()
 

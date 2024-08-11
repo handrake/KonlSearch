@@ -2,8 +2,8 @@ import threading
 
 from typing import Union
 
-type AbcLock = Union[threading.Lock, threading.RLock]
-type LockType = Union[type(threading.Lock), type(threading.RLock)]
+AbcLock = Union[threading.Lock, threading.RLock]
+LockType = Union[type(threading.Lock), type(threading.RLock)]
 
 
 class StripedLock:
