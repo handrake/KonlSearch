@@ -192,6 +192,12 @@ def test_index_len(index):
     assert len(index) == 132
 
 
+def test_index_get(index):
+    r = index.get(10)
+
+    assert r["id"] == 10 and r["document"] == '그 비스크 돌은 사랑을 한다'
+
+
 def test_index_get_all(index):
     result = index.get_all()
 
