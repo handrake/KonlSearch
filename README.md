@@ -22,6 +22,10 @@ This project aims to implement a minimal database that can be used as an embedde
 [2, 3] # "마법소녀" is indexed in document 2, 3
 >>> index.search(["마법소녀", "적대"], TokenSearchMode.AND) # matches only documents that have both "마법소녀" and "적대"
 [3]
+>>> index.get(2)
+{'id': 2, 'document': '마법소녀 따위는 이제 됐으니까.'}
+>>> index.get_all()
+[{'id': 1, 'document': '귀환자의 마법은 특별해야 합니다'}, {'id': 2, 'document': '마법소녀 따위는 이제 됐으니까.'}, {'id': 3, 'document': '일찍이 마법소녀와 악은 적대고 있었다.'}]
 >>> index.search_suggestions("ㅈ") # searches all tokens that begin with 'ㅈ', useful for autocomplete
 ['적대', '적대하고']
 >>> ks.close()
