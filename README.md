@@ -35,7 +35,10 @@ This project aims to implement a minimal database that can be used as an embedde
 
 ## Usage
 
-More internal and advanced usage can be found under [test/test_konlsearch.py](test/test_konlsearch.py)
+More internal and advanced usages can be found under [test/test_konlsearch.py](test/test_konlsearch.py)
+
+## Limitations
+- Currently, a write lock on the entire index is acquire when indexing a document. RocksDB's WriteBatch may be used to overcome this issue, but it may or may not be implemented in the near future.
 
 ## Acknowledgements
 
