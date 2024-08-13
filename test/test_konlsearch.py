@@ -287,4 +287,4 @@ def test_trie_suggestion(index):
 def test_get_all_indexes(konl_search, index):
     indexes = sorted(konl_search.get_all_indexes())
 
-    assert indexes == ["default", "title", "title_inverted_index", "title_trie"]
+    assert indexes == ["title"]
