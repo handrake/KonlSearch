@@ -282,3 +282,9 @@ def test_trie_suggestion(index):
     suggestions = index.search_suggestions(prefix)
 
     assert suggestions == ["특급", "특별", "특별해야"]
+
+
+def test_get_all_indexes(konl_search, index):
+    indexes = sorted(konl_search.get_all_indexes())
+
+    assert indexes == ["default", "title", "title_inverted_index", "title_trie"]

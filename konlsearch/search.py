@@ -1,3 +1,5 @@
+import typing
+
 import rocksdict
 
 from .index import KonlIndex
@@ -13,6 +15,9 @@ class KonlSearch:
 
     def index(self, name) -> KonlIndex:
         return KonlIndex(self.db, name)
+
+    def get_all_indexes(self) -> typing.List[str]:
+        return self.db.list_cf(self.path)
 
     def close(self):
         self.db.close()
