@@ -2,8 +2,8 @@ import rocksdict
 import typing
 
 from . import utility
-from .dict import KonlDict
-from .set import KonlSet
+from .dict import KonlDict, KonlDictIter
+from .set import KonlSet, KonlSetIter
 
 import hgtk
 
@@ -65,31 +65,33 @@ class KonlTrie:
     def search(self, prefix: str) -> typing.List[str]:
         decomposed_prefix = self.__decompose_word(prefix)
 
-        return sorted(self.__search(decomposed_prefix))
+        return sorted(self.__search(self._cf.iter(), decomposed_prefix))
 
-    def __search(self, decomposed_prefix: str) -> typing.Set[str]:
-        s = KonlSet(self._cf, decomposed_prefix)
+    def __search(self, iter: rocksdict.RdictIter, decomposed_prefix: str) -> typing.Set[str]:
+        s = KonlSetIter(iter, decomposed_prefix)
 
         if len(s) == 0:
             return set()
 
         result_set = set()
 
-        if decomposed_prefix in self._token_reverse_dict:
-            result_set.add(self._token_reverse_dict[decomposed_prefix])
+        token_reverse_dict = KonlDictIter(iter, _TOKEN_REVERSE_DICT)
+
+        if decomposed_prefix in token_reverse_dict:
+            result_set.add(token_reverse_dict[decomposed_prefix])
 
         candidate_set = set()
 
-        decomposed_prefix_set = KonlSet(self._cf, decomposed_prefix)
+        decomposed_prefix_set = KonlSetIter(iter, decomposed_prefix)
 
         for s in decomposed_prefix_set.items():
             candidate_set.add(s)
 
         for candidate_prefix in candidate_set:
-            if candidate_prefix in self._token_reverse_dict:
-                result_set.add(self._token_reverse_dict[candidate_prefix])
+            if candidate_prefix in token_reverse_dict:
+                result_set.add(token_reverse_dict[candidate_prefix])
 
-            result_set.update(self.__search(candidate_prefix))
+            result_set.update(self.__search(iter, candidate_prefix))
 
         return result_set
 
