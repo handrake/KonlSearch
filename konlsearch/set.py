@@ -51,8 +51,13 @@ class KonlSet:
     def __remove_prefix(self, key_with_prefix: str) -> str:
         return key_with_prefix.replace(self._prefix + ":", "")
 
+    def toView(self):
+        iter = self._cf.iter()
 
-class KonlSetIter:
+        return KonlSetView(iter, self._prefix)
+
+
+class KonlSetView:
     def __init__(self, iter: rocksdict.RdictIter, prefix: str):
         self._iter = iter
         self._prefix = f'{prefix}:set'

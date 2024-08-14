@@ -5,7 +5,7 @@ import enum
 from . import utility
 
 from .trie import KonlTrie
-from .set import KonlSet, KonlSetIter, KonlSetWriteBatch
+from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 
 
 class TokenSearchMode(enum.Flag):
@@ -21,12 +21,12 @@ class KonlInvertedIndex:
         self._trie = KonlTrie(db, name)
 
     def __getitem__(self, token: str) -> typing.Set[int]:
-        s = KonlSetIter(self._cf.iter(), token)
+        s = KonlSetView(self._cf.iter(), token)
 
         return {int(e) for e in s.items()}
 
     def __contains__(self, token: str) -> bool:
-        s = KonlSetIter(self._cf.iter(), token)
+        s = KonlSetView(self._cf.iter(), token)
 
         return len(s) > 0
 
@@ -62,7 +62,7 @@ class KonlInvertedIndex:
         iter = self._cf.iter()
 
         for i, token in enumerate(tokens):
-            s = KonlSetIter(iter, token)
+            s = KonlSetView(iter, token)
 
             document_ids = {int(e) for e in s.items()}
 

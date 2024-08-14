@@ -2,8 +2,8 @@ import rocksdict
 import typing
 
 from . import utility
-from .dict import KonlDict, KonlDictIter
-from .set import KonlSet, KonlSetIter
+from .dict import KonlDict, KonlDictView
+from .set import KonlSet, KonlSetView
 
 import hgtk
 
@@ -29,21 +29,21 @@ class KonlTrieView:
         return sorted(self.__search(decomposed_prefix))
 
     def __search(self, decomposed_prefix: str) -> typing.Set[str]:
-        s = KonlSetIter(self._iter, decomposed_prefix)
+        s = KonlSetView(self._iter, decomposed_prefix)
 
         if len(s) == 0:
             return set()
 
         result_set = set()
 
-        token_reverse_dict = KonlDictIter(self._iter, _TOKEN_REVERSE_DICT)
+        token_reverse_dict = KonlDictView(self._iter, _TOKEN_REVERSE_DICT)
 
         if decomposed_prefix in token_reverse_dict:
             result_set.add(token_reverse_dict[decomposed_prefix])
 
         candidate_set = set()
 
-        decomposed_prefix_set = KonlSetIter(self._iter, decomposed_prefix)
+        decomposed_prefix_set = KonlSetView(self._iter, decomposed_prefix)
 
         for s in decomposed_prefix_set.items():
             candidate_set.add(s)
@@ -114,21 +114,21 @@ class KonlTrie:
         return sorted(self.__search(self._cf.iter(), decomposed_prefix))
 
     def __search(self, iter: rocksdict.RdictIter, decomposed_prefix: str) -> typing.Set[str]:
-        s = KonlSetIter(iter, decomposed_prefix)
+        s = KonlSetView(iter, decomposed_prefix)
 
         if len(s) == 0:
             return set()
 
         result_set = set()
 
-        token_reverse_dict = KonlDictIter(iter, _TOKEN_REVERSE_DICT)
+        token_reverse_dict = KonlDictView(iter, _TOKEN_REVERSE_DICT)
 
         if decomposed_prefix in token_reverse_dict:
             result_set.add(token_reverse_dict[decomposed_prefix])
 
         candidate_set = set()
 
-        decomposed_prefix_set = KonlSetIter(iter, decomposed_prefix)
+        decomposed_prefix_set = KonlSetView(iter, decomposed_prefix)
 
         for s in decomposed_prefix_set.items():
             candidate_set.add(s)
