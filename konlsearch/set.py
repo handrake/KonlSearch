@@ -1,9 +1,42 @@
+import abc
 import typing
 
 import rocksdict
 
 
-class KonlSetView:
+class KonlSetReader(abc.ABC):
+    @abc.abstractmethod
+    def __contains__(self, k: str) -> bool:
+        pass
+
+    def __len__(self) -> int:
+        len = 0
+
+        for _ in self.items():
+            len += 1
+
+        return len
+
+    @abc.abstractmethod
+    def items(self) -> typing.Generator[str, None, None]:
+        pass
+
+
+class KonlSetWriter(abc.ABC):
+    @abc.abstractmethod
+    def add(self, k: str):
+        pass
+
+    @abc.abstractmethod
+    def remove(self, k: str):
+        pass
+
+    @abc.abstractmethod
+    def update(self, s: typing.Set[str]):
+        pass
+
+
+class KonlSetView(KonlSetReader):
     def __init__(self, iter: rocksdict.RdictIter, prefix: str):
         self._iter = iter
         self._prefix = f'{prefix}:set'
@@ -14,14 +47,6 @@ class KonlSetView:
         self._iter.seek(key)
 
         return self._iter.valid() and self._iter.key() == key
-
-    def __len__(self) -> int:
-        len = 0
-
-        for _ in self.items():
-            len += 1
-
-        return len
 
     def items(self) -> typing.Generator[str, None, None]:
         it = self._iter
@@ -38,7 +63,7 @@ class KonlSetView:
         return key_with_prefix.replace(self._prefix + ":", "")
 
 
-class KonlSet:
+class KonlSet(KonlSetReader, KonlSetWriter):
     def __init__(self, cf: rocksdict.Rdict, prefix: str):
         self._cf = cf
         self._prefix = f'{prefix}:set'
@@ -47,14 +72,6 @@ class KonlSet:
         key = self.__build_key_name(k)
 
         return key in self._cf
-
-    def __len__(self) -> int:
-        len = 0
-
-        for _ in self.items():
-            len += 1
-
-        return len
 
     def toView(self):
         iter = self._cf.iter()
@@ -92,7 +109,7 @@ class KonlSet:
         return key_with_prefix.replace(self._prefix + ":", "")
 
 
-class KonlSetWriteBatch:
+class KonlSetWriteBatch(KonlSetWriter):
     def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
         self._wb = wb
         self._prefix = f'{prefix}:set'

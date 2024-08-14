@@ -1,9 +1,43 @@
+import abc
 import typing
 
 import rocksdict
 
 
-class KonlDictView:
+class KonlDictReader(abc.ABC):
+    @abc.abstractmethod
+    def __contains__(self, k: str) -> bool:
+        pass
+
+    def __len__(self) -> int:
+        len = 0
+
+        for _ in self.items():
+            len += 1
+
+        return len
+
+    @abc.abstractmethod
+    def items(self) -> typing.Generator[str, None, None]:
+        pass
+
+
+class KonlDictWriter(abc.ABC):
+    @abc.abstractmethod
+    def __setitem__(self, k: str, v: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def __delitem__(self, k: str):
+        pass
+
+    @abc.abstractmethod
+    def update(self, d: typing.Dict):
+        pass
+
+
+
+class KonlDictView(KonlDictReader):
     def __init__(self, iter: rocksdict.RdictIter, prefix: str):
         self._iter = iter
         self._prefix = f'{prefix}:dict'
@@ -25,14 +59,6 @@ class KonlDictView:
 
         return self._iter.valid() and self._iter.key() == key
 
-    def __len__(self) -> int:
-        len = 0
-
-        for _ in self.items():
-            len += 1
-
-        return len
-
     def items(self) -> typing.Generator[tuple[str, str], None, None]:
         it = self._iter()
         it.seek(self._prefix)
@@ -48,7 +74,7 @@ class KonlDictView:
         return key_with_prefix.replace(self._prefix + ":", "")
 
 
-class KonlDict:
+class KonlDict(KonlDictReader, KonlDictWriter):
     def __init__(self, cf: rocksdict.Rdict, prefix: str):
         self._cf = cf
         self._prefix = f'{prefix}:dict'
@@ -75,14 +101,6 @@ class KonlDict:
 
         return key in self._cf
 
-    def __len__(self) -> int:
-        len = 0
-
-        for _ in self.items():
-            len += 1
-
-        return len
-
     def items(self) -> typing.Generator[tuple[str, str], None, None]:
         it = self._cf.iter()
         it.seek(self._prefix)
@@ -107,7 +125,7 @@ class KonlDict:
         return KonlDictView(iter, self._prefix)
 
 
-class KonlDictWriteBatch:
+class KonlDictWriteBatch(KonlDictWriter):
     def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
         self._wb = wb
         self._prefix = f'{prefix}:dict'
