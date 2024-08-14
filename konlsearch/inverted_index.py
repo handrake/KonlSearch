@@ -5,7 +5,7 @@ import enum
 from . import utility
 
 from .trie import KonlTrie
-from .set import KonlSet, KonlSetIter
+from .set import KonlSet, KonlSetIter, KonlSetWriteBatch
 
 
 class TokenSearchMode(enum.Flag):
@@ -35,11 +35,17 @@ class KonlInvertedIndex:
         self._trie.close()
 
     def index(self, document_id: int, tokens: typing.Set[str]):
+        wb = rocksdict.WriteBatch()
+        cf_handle = self._db.get_column_family_handle(self._name)
+        wb.set_default_column_family(cf_handle)
+
         for token in tokens:
-            s = KonlSet(self._cf, token)
-            s.add(str(document_id))
+            s_wb = KonlSetWriteBatch(wb, token)
+            s_wb.add(str(document_id))
 
             self._trie.insert(token)
+
+        self._cf.write(wb)
 
     def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
         for token in tokens:
