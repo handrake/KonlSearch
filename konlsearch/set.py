@@ -85,3 +85,26 @@ class KonlSetIter:
 
     def __remove_prefix(self, key_with_prefix: str) -> str:
         return key_with_prefix.replace(self._prefix + ":", "")
+
+
+class KonlSetWriteBatch:
+    def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
+        self._wb = wb
+        self._prefix = f'{prefix}:set'
+
+    def add(self, k: str):
+        key = self.__build_key_name(k)
+
+        self._wb[key] = "1"
+
+    def remove(self, k: str):
+        key = self.__build_key_name(k)
+
+        del self._wb[key]
+
+    def update(self, s: typing.Set[str]):
+        for k in s:
+            self.add(k)
+
+    def __build_key_name(self, k: str) -> str:
+        return f'{self._prefix}:{k}'

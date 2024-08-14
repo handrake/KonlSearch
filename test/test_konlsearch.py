@@ -1,9 +1,10 @@
 from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
-from konlsearch.set import KonlSet
+from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict
 
 import pytest
+import rocksdict
 
 title_document = '''
 거신병 도쿄에 나타나다
@@ -248,6 +249,37 @@ def test_set(index):
 
     assert list(s.items()) == []
     assert len(s) == 0
+
+
+def test_set_writebatch(index):
+    wb1 = rocksdict.WriteBatch()
+    cf_handle = index._db.get_column_family_handle(index._name)
+    wb1.set_default_column_family(column_family=cf_handle)
+    s_wb = KonlSetWriteBatch(wb1, "test")
+
+    s_wb.add("1")
+    s_wb.add("2")
+    s_wb.add("3")
+
+    index._cf.write(wb1)
+
+    s = KonlSet(index._cf, "test")
+
+    assert list(s.items()) == ["1", "2", "3"]
+    assert len(s) == 3
+
+    wb2 = rocksdict.WriteBatch()
+    wb2.set_default_column_family(column_family=cf_handle)
+    s_wb = KonlSetWriteBatch(wb2, "test")
+
+    s_wb.remove("1")
+
+    index._cf.write(wb2)
+
+    s = KonlSet(index._cf, "test")
+
+    assert list(s.items()) == ["2", "3"]
+    assert len(s) == 2
 
 
 def test_dict(index):
