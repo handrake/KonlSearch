@@ -100,3 +100,26 @@ class KonlDictIter:
 
     def __remove_prefix(self, key_with_prefix: str) -> str:
         return key_with_prefix.replace(self._prefix + ":", "")
+
+
+class KonlDictWriteBatch:
+    def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
+        self._wb = wb
+        self._prefix = f'{prefix}:dict'
+
+    def __setitem__(self, k: str, v: str) -> None:
+        key = self.__build_key_name(k)
+
+        self._wb[key] = v
+
+    def __delitem__(self, k: str):
+        key = self.__build_key_name(k)
+
+        del self._wb[key]
+
+    def update(self, d: typing.Dict):
+        for k, v in d.items():
+            self.__setitem__(k, v)
+
+    def __build_key_name(self, k: str) -> str:
+        return f'{self._prefix}:{k}'

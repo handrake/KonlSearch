@@ -1,7 +1,7 @@
 from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
 from konlsearch.set import KonlSet, KonlSetWriteBatch
-from konlsearch.dict import KonlDict
+from konlsearch.dict import KonlDict, KonlDictWriteBatch
 
 import pytest
 import rocksdict
@@ -306,6 +306,37 @@ def test_dict(index):
 
     assert list(d.items()) == []
     assert len(d) == 0
+
+
+def test_dict_writebatch(index):
+    wb1 = rocksdict.WriteBatch()
+    cf_handle = index._db.get_column_family_handle(index._name)
+    wb1.set_default_column_family(column_family=cf_handle)
+    d_wb = KonlDictWriteBatch(wb1, "test")
+
+    d_wb["a"] = "1"
+    d_wb["b"] = "2"
+    d_wb["c"] = "3"
+
+    index._cf.write(wb1)
+
+    d = KonlDict(index._cf, "test")
+
+    assert list(d.items()) == [("a", "1"), ("b", "2"), ("c", "3")]
+    assert len(d) == 3
+
+    wb2 = rocksdict.WriteBatch()
+    wb2.set_default_column_family(column_family=cf_handle)
+    d_wb = KonlDictWriteBatch(wb2, "test")
+
+    del d_wb["a"]
+
+    index._cf.write(wb2)
+
+    d = KonlDict(index._cf, "test")
+
+    assert list(d.items()) == [("b", "2"), ("c", "3")]
+    assert len(d) == 2
 
 
 def test_trie_suggestion(index):
