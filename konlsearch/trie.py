@@ -11,9 +11,55 @@ _TOKEN_DICT = "token_dict"
 _TOKEN_REVERSE_DICT = "token_reverse_dict"
 
 
+def build_trie_name(index_name) -> str:
+    return f'{index_name}_trie'
+
+
+def decompose_word(word: str) -> str:
+    return hgtk.text.decompose(text=word, compose_code="")
+
+
+class KonlTrieView:
+    def __init__(self, iter: rocksdict.RdictIter):
+        self._iter = iter
+
+    def search(self, prefix: str) -> typing.List[str]:
+        decomposed_prefix = decompose_word(prefix)
+
+        return sorted(self.__search(decomposed_prefix))
+
+    def __search(self, decomposed_prefix: str) -> typing.Set[str]:
+        s = KonlSetIter(self._iter, decomposed_prefix)
+
+        if len(s) == 0:
+            return set()
+
+        result_set = set()
+
+        token_reverse_dict = KonlDictIter(self._iter, _TOKEN_REVERSE_DICT)
+
+        if decomposed_prefix in token_reverse_dict:
+            result_set.add(token_reverse_dict[decomposed_prefix])
+
+        candidate_set = set()
+
+        decomposed_prefix_set = KonlSetIter(self._iter, decomposed_prefix)
+
+        for s in decomposed_prefix_set.items():
+            candidate_set.add(s)
+
+        for candidate_prefix in candidate_set:
+            if candidate_prefix in token_reverse_dict:
+                result_set.add(token_reverse_dict[candidate_prefix])
+
+            result_set.update(self.__search(candidate_prefix))
+
+        return result_set
+
+
 class KonlTrie:
     def __init__(self, db: rocksdict.Rdict, name: str):
-        self._name = self.__build_trie_name(name)
+        self._name = build_trie_name(name)
         self._cf = utility.create_or_get_cf(db, self._name)
         self._token_dict = KonlDict(self._cf, _TOKEN_DICT)
         self._token_reverse_dict = KonlDict(self._cf, _TOKEN_REVERSE_DICT)
@@ -25,7 +71,7 @@ class KonlTrie:
         if token in self._token_dict:
             return
 
-        decomposed_token = self.__decompose_word(token)
+        decomposed_token = decompose_word(token)
 
         for i in range(len(decomposed_token)):
             s = decomposed_token[:i+1]
@@ -46,7 +92,7 @@ class KonlTrie:
         if token not in self._token_dict:
             return
 
-        decomposed_token = self.__decompose_word(token)
+        decomposed_token = decompose_word(token)
 
         if decomposed_token not in self._token_reverse_dict:
             return
@@ -63,7 +109,7 @@ class KonlTrie:
         del self._token_reverse_dict[decomposed_token]
 
     def search(self, prefix: str) -> typing.List[str]:
-        decomposed_prefix = self.__decompose_word(prefix)
+        decomposed_prefix = decompose_word(prefix)
 
         return sorted(self.__search(self._cf.iter(), decomposed_prefix))
 
@@ -95,10 +141,5 @@ class KonlTrie:
 
         return result_set
 
-    @staticmethod
-    def __build_trie_name(index_name):
-        return f'{index_name}_trie'
-
-    @staticmethod
-    def __decompose_word(word: str) -> str:
-        return hgtk.text.decompose(text=word, compose_code="")
+    def toView(self) -> KonlTrieView:
+        return KonlTrieView(self._cf.iter())

@@ -77,7 +77,7 @@ class KonlInvertedIndex:
         return sorted(list(result_set))
 
     def search_suggestions(self, prefix: str) -> typing.List[str]:
-        return self._trie.search(prefix)
+        return self._trie.toView().search(prefix)
 
     @staticmethod
     def __build_inverted_index_name(name: str) -> str:
