@@ -113,6 +113,10 @@ class KonlIndex:
 
         return result
 
+    def get_multi(self, document_ids: typing.List[int]) -> typing.List[IndexGetResponseType]:
+        keys = [self.__build_key_name(document_id) for document_id in document_ids]
+
+        return [IndexGetResponseType(id=document_ids[i], document=document) for i, document in enumerate(self._cf[keys]) if document]
 
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.__build_token_name(document_id)]

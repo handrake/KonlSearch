@@ -217,6 +217,14 @@ def test_index_get_range(index):
 
     assert document_ids == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
+def test_index_get_multi(index):
+    result = index.get_multi([10, 15, 20, 1000])
+
+    document_ids = [document["id"] for document in result]
+
+    assert document_ids == [10, 15, 20]
+
+
 def test_inverted_index_delete(index):
     token = "다이아몬드"
 
