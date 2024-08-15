@@ -25,9 +25,16 @@ class KonlSetReader(AbstractKonlSet):
 
         return len
 
-    @abc.abstractmethod
     def items(self) -> typing.Generator[str, None, None]:
-        pass
+        if hasattr(self, "_iter"):
+            it = self._iter
+        else:
+            it = self._cf.iter()
+        it.seek(self._prefix)
+
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+            yield self.remove_prefix(it.key())
+            it.next()
 
 
 class KonlSetWriter(AbstractKonlSet):
@@ -56,13 +63,6 @@ class KonlSetView(KonlSetReader):
 
         return self._iter.valid() and self._iter.key() == key
 
-    def items(self) -> typing.Generator[str, None, None]:
-        it = self._iter
-        it.seek(self._prefix)
-
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.remove_prefix(it.key())
-            it.next()
 
 class KonlSet(KonlSetReader, KonlSetWriter):
     def __init__(self, cf: rocksdict.Rdict, prefix: str):
@@ -89,14 +89,6 @@ class KonlSet(KonlSetReader, KonlSetWriter):
 
         if key in self._cf:
             self._cf.delete(key)
-
-    def items(self) -> typing.Generator[str, None, None]:
-        it = self._cf.iter()
-        it.seek(self._prefix)
-
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.remove_prefix(it.key())
-            it.next()
 
     def update(self, s: typing.Set[str]):
         for k in s:
