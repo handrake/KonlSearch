@@ -2,13 +2,15 @@ import rocksdict
 import typing
 import enum
 
+from strenum import StrEnum
+
 from . import utility
 
 from .trie import KonlTrie
 from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 
 
-class TokenSearchMode(enum.Flag):
+class TokenSearchMode(StrEnum):
     AND = enum.auto()
     OR = enum.auto()
 
