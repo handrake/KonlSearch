@@ -25,9 +25,16 @@ class KonlDictReader(AbstractKonlDict):
 
         return len
 
-    @abc.abstractmethod
-    def items(self) -> typing.Generator[str, None, None]:
-        pass
+    def items(self) -> typing.Generator[tuple[str, str], None, None]:
+        if hasattr(self, "_iter"):
+            it = self._iter()
+        else:
+            it = self._cf.iter()
+        it.seek(self._prefix)
+
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+            yield self.remove_prefix(it.key()), it.value()
+            it.next()
 
 
 class KonlDictWriter(AbstractKonlDict):
@@ -66,14 +73,6 @@ class KonlDictView(KonlDictReader):
 
         return self._iter.valid() and self._iter.key() == key
 
-    def items(self) -> typing.Generator[tuple[str, str], None, None]:
-        it = self._iter()
-        it.seek(self._prefix)
-
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.remove_prefix(it.key()), it.value()
-            it.next()
-
 
 class KonlDict(KonlDictReader, KonlDictWriter):
     def __init__(self, cf: rocksdict.Rdict, prefix: str):
@@ -100,14 +99,6 @@ class KonlDict(KonlDictReader, KonlDictWriter):
         key = self.build_key_name(k)
 
         return key in self._cf
-
-    def items(self) -> typing.Generator[tuple[str, str], None, None]:
-        it = self._cf.iter()
-        it.seek(self._prefix)
-
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.remove_prefix(it.key()), it.value()
-            it.next()
 
     def update(self, d: typing.Dict):
         for k, v in d.items():
