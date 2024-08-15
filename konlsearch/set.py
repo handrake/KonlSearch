@@ -81,8 +81,7 @@ class KonlSet(KonlSetReader, KonlSetWriter):
     def add(self, k: str):
         key = self.__build_key_name(k)
 
-        if key not in self._cf:
-            self._cf[key] = "1"
+        self._cf[key] = "1"
 
     def remove(self, k: str):
         key = self.__build_key_name(k)

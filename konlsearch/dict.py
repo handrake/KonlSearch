@@ -87,8 +87,7 @@ class KonlDict(KonlDictReader, KonlDictWriter):
     def __setitem__(self, k: str, v: str) -> None:
         key = self.__build_key_name(k)
 
-        if key not in self._cf:
-            self._cf[key] = v
+        self._cf[key] = v
 
     def __delitem__(self, k: str):
         key = self.__build_key_name(k)
