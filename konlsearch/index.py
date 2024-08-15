@@ -96,7 +96,7 @@ class KonlIndexWriteBatch(KonlIndexWriter):
             else:
                 self._wb[self._len_prefix] = last_document_id
 
-            self._inverted_index.toWriteBatch(self._wb).index(last_document_id, tokens)
+            self._inverted_index.to_write_batch(self._wb).index(last_document_id, tokens)
 
             self._cf.write(self._wb)
 
@@ -135,7 +135,7 @@ class KonlIndex(KonlIndexWriter):
 
         return last_document_id
 
-    def toWriteBatch(self):
+    def to_write_batch(self):
         wb = rocksdict.WriteBatch()
         cf_handle = self._cf.get_column_family_handle(self._name)
         wb.set_default_column_family(cf_handle)

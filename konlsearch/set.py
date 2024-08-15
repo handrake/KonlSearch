@@ -74,7 +74,7 @@ class KonlSet(KonlSetReader, KonlSetWriter):
 
         return key in self._cf
 
-    def toView(self):
+    def to_view(self):
         iter = self._cf.iter()
 
         return KonlSetView(iter, self._prefix)
@@ -93,6 +93,7 @@ class KonlSet(KonlSetReader, KonlSetWriter):
     def update(self, s: typing.Set[str]):
         for k in s:
             self.add(k)
+
 
 class KonlSetWriteBatch(KonlSetWriter):
     def __init__(self, wb: rocksdict.WriteBatch, prefix: str):

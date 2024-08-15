@@ -117,10 +117,10 @@ class KonlTrie:
     def close(self):
         self._cf.close()
 
-    def toView(self) -> KonlTrieView:
+    def to_view(self) -> KonlTrieView:
         return KonlTrieView(self._cf.iter())
 
-    def toWriteBatch(self, wb: rocksdict.WriteBatch) -> KonlTrieWriteBatch:
+    def to_write_batch(self, wb: rocksdict.WriteBatch) -> KonlTrieWriteBatch:
         cf_handle = self._cf.get_column_family_handle(self._name)
         wb.set_default_column_family(cf_handle)
         return KonlTrieWriteBatch(self._cf, wb)
@@ -167,4 +167,4 @@ class KonlTrie:
         del self._token_reverse_dict[decomposed_token]
 
     def search(self, prefix: str) -> typing.List[str]:
-        return self.toView().search(prefix)
+        return self.to_view().search(prefix)

@@ -104,7 +104,7 @@ class KonlDict(KonlDictReader, KonlDictWriter):
         for k, v in d.items():
             self.__setitem__(k, v)
 
-    def toView(self):
+    def to_view(self):
         iter = self._cf.iter()
 
         return KonlDictView(iter, self._prefix)

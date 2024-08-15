@@ -200,7 +200,7 @@ def test_search_mode_phrase(index):
 
 
 def test_index_writebatch(index):
-    index.toWriteBatch().index("기동전사 건담")
+    index.to_write_batch().index("기동전사 건담")
 
     assert len(index) == 133
 
@@ -212,7 +212,7 @@ def test_index_writebatch(index):
 
     wb = rocksdict.WriteBatch()
 
-    index._inverted_index.toWriteBatch(wb).delete(10, tokens)
+    index._inverted_index.to_write_batch(wb).delete(10, tokens)
 
     index._cf.write(wb)
 

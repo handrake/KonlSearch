@@ -27,7 +27,7 @@ class KonlInvertedIndexWriteBatch:
             s_wb = KonlSetWriteBatch(self._wb, token)
             s_wb.add(str(document_id))
 
-        trie_wb = self._trie.toWriteBatch(self._wb)
+        trie_wb = self._trie.to_write_batch(self._wb)
 
         for token in tokens:
             trie_wb.insert(token)
@@ -39,7 +39,7 @@ class KonlInvertedIndexWriteBatch:
             s_wb.remove(str(document_id))
 
             if document_id in s and len(s) == 1:
-                self._trie.toWriteBatch(self._wb).delete(token)
+                self._trie.to_write_batch(self._wb).delete(token)
 
 
 class KonlInvertedIndex:
@@ -63,7 +63,7 @@ class KonlInvertedIndex:
         self._cf.close()
         self._trie.close()
 
-    def toWriteBatch(self, wb: rocksdict.WriteBatch):
+    def to_write_batch(self, wb: rocksdict.WriteBatch):
         cf_handle = self._cf.get_column_family_handle(self._name)
         wb.set_default_column_family(cf_handle)
         return KonlInvertedIndexWriteBatch(self._cf, self._trie, wb)
@@ -111,7 +111,7 @@ class KonlInvertedIndex:
         return sorted(list(result_set))
 
     def search_suggestions(self, prefix: str) -> typing.List[str]:
-        return self._trie.toView().search(prefix)
+        return self._trie.to_view().search(prefix)
 
     @staticmethod
     def __build_inverted_index_name(name: str) -> str:
