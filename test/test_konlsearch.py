@@ -204,6 +204,22 @@ def test_index_writebatch(index):
 
     assert len(index) == 133
 
+    tokens = index.get_tokens(10)
+
+    document_ids = index._inverted_index.search(tokens, TokenSearchMode.AND)
+
+    assert document_ids == [10]
+
+    wb = rocksdict.WriteBatch()
+
+    index._inverted_index.toWriteBatch(wb).delete(10, tokens)
+
+    index._cf.write(wb)
+
+    document_ids = index._inverted_index.search(tokens, TokenSearchMode.AND)
+
+    assert document_ids == []
+
 
 def test_index_len(index):
     assert len(index) == 132

@@ -17,7 +17,8 @@ class TokenSearchMode(StrEnum):
 
 
 class KonlInvertedIndexWriteBatch:
-    def __init__(self, trie: KonlTrie, wb: rocksdict.WriteBatch):
+    def __init__(self, cf: rocksdict.Rdict, trie: KonlTrie, wb: rocksdict.WriteBatch):
+        self._iter = cf.iter()
         self._wb = wb
         self._trie = trie
 
@@ -30,6 +31,15 @@ class KonlInvertedIndexWriteBatch:
 
         for token in tokens:
             trie_wb.insert(token)
+
+    def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
+        for token in tokens:
+            s = KonlSetView(self._iter, token)
+            s_wb = KonlSetWriteBatch(self._wb, token)
+            s_wb.remove(str(document_id))
+
+            if document_id in s and len(s) == 1:
+                self._trie.toWriteBatch(self._wb).delete(token)
 
 
 class KonlInvertedIndex:
@@ -56,7 +66,7 @@ class KonlInvertedIndex:
     def toWriteBatch(self, wb: rocksdict.WriteBatch):
         cf_handle = self._cf.get_column_family_handle(self._name)
         wb.set_default_column_family(cf_handle)
-        return KonlInvertedIndexWriteBatch(self._trie, wb)
+        return KonlInvertedIndexWriteBatch(self._cf, self._trie, wb)
 
     def index(self, document_id: int, tokens: typing.Set[str]):
         wb = rocksdict.WriteBatch()
