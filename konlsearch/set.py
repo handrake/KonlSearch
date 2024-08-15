@@ -4,7 +4,15 @@ import typing
 import rocksdict
 
 
-class KonlSetReader(abc.ABC):
+class AbstractKonlSet(abc.ABC):
+    def build_key_name(self, k: str) -> str:
+        return f'{self._prefix}:{k}'
+
+    def remove_prefix(self, key_with_prefix: str) -> str:
+        return key_with_prefix.replace(self._prefix + ":", "")
+
+
+class KonlSetReader(AbstractKonlSet):
     @abc.abstractmethod
     def __contains__(self, k: str) -> bool:
         pass
@@ -22,7 +30,7 @@ class KonlSetReader(abc.ABC):
         pass
 
 
-class KonlSetWriter(abc.ABC):
+class KonlSetWriter(AbstractKonlSet):
     @abc.abstractmethod
     def add(self, k: str):
         pass
@@ -42,7 +50,7 @@ class KonlSetView(KonlSetReader):
         self._prefix = f'{prefix}:set'
 
     def __contains__(self, k: str) -> bool:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._iter.seek(key)
 
@@ -53,15 +61,8 @@ class KonlSetView(KonlSetReader):
         it.seek(self._prefix)
 
         while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.__remove_prefix(it.key())
+            yield self.remove_prefix(it.key())
             it.next()
-
-    def __build_key_name(self, k: str) -> str:
-        return f'{self._prefix}:{k}'
-
-    def __remove_prefix(self, key_with_prefix: str) -> str:
-        return key_with_prefix.replace(self._prefix + ":", "")
-
 
 class KonlSet(KonlSetReader, KonlSetWriter):
     def __init__(self, cf: rocksdict.Rdict, prefix: str):
@@ -69,7 +70,7 @@ class KonlSet(KonlSetReader, KonlSetWriter):
         self._prefix = f'{prefix}:set'
 
     def __contains__(self, k: str) -> bool:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         return key in self._cf
 
@@ -79,12 +80,12 @@ class KonlSet(KonlSetReader, KonlSetWriter):
         return KonlSetView(iter, self._prefix)
 
     def add(self, k: str):
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._cf[key] = "1"
 
     def remove(self, k: str):
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         if key in self._cf:
             self._cf.delete(key)
@@ -94,19 +95,12 @@ class KonlSet(KonlSetReader, KonlSetWriter):
         it.seek(self._prefix)
 
         while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.__remove_prefix(it.key())
+            yield self.remove_prefix(it.key())
             it.next()
 
     def update(self, s: typing.Set[str]):
         for k in s:
             self.add(k)
-
-    def __build_key_name(self, k: str) -> str:
-        return f'{self._prefix}:{k}'
-
-    def __remove_prefix(self, key_with_prefix: str) -> str:
-        return key_with_prefix.replace(self._prefix + ":", "")
-
 
 class KonlSetWriteBatch(KonlSetWriter):
     def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
@@ -114,18 +108,15 @@ class KonlSetWriteBatch(KonlSetWriter):
         self._prefix = f'{prefix}:set'
 
     def add(self, k: str):
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._wb[key] = "1"
 
     def remove(self, k: str):
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         del self._wb[key]
 
     def update(self, s: typing.Set[str]):
         for k in s:
             self.add(k)
-
-    def __build_key_name(self, k: str) -> str:
-        return f'{self._prefix}:{k}'

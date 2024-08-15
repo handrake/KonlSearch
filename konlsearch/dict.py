@@ -4,7 +4,15 @@ import typing
 import rocksdict
 
 
-class KonlDictReader(abc.ABC):
+class AbstractKonlDict(abc.ABC):
+    def build_key_name(self, k: str) -> str:
+        return f'{self._prefix}:{k}'
+
+    def remove_prefix(self, key_with_prefix: str) -> str:
+        return key_with_prefix.replace(self._prefix + ":", "")
+
+
+class KonlDictReader(AbstractKonlDict):
     @abc.abstractmethod
     def __contains__(self, k: str) -> bool:
         pass
@@ -22,7 +30,7 @@ class KonlDictReader(abc.ABC):
         pass
 
 
-class KonlDictWriter(abc.ABC):
+class KonlDictWriter(AbstractKonlDict):
     @abc.abstractmethod
     def __setitem__(self, k: str, v: str) -> None:
         pass
@@ -36,14 +44,13 @@ class KonlDictWriter(abc.ABC):
         pass
 
 
-
 class KonlDictView(KonlDictReader):
     def __init__(self, iter: rocksdict.RdictIter, prefix: str):
         self._iter = iter
         self._prefix = f'{prefix}:dict'
 
     def __getitem__(self, k: str) -> str:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._iter.seek(key)
 
@@ -53,7 +60,7 @@ class KonlDictView(KonlDictReader):
         raise KeyError
 
     def __contains__(self, k: str) -> bool:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._iter.seek(key)
 
@@ -64,14 +71,8 @@ class KonlDictView(KonlDictReader):
         it.seek(self._prefix)
 
         while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.__remove_prefix(it.key()), it.value()
+            yield self.remove_prefix(it.key()), it.value()
             it.next()
-
-    def __build_key_name(self, k: str) -> str:
-        return f'{self._prefix}:{k}'
-
-    def __remove_prefix(self, key_with_prefix: str) -> str:
-        return key_with_prefix.replace(self._prefix + ":", "")
 
 
 class KonlDict(KonlDictReader, KonlDictWriter):
@@ -80,23 +81,23 @@ class KonlDict(KonlDictReader, KonlDictWriter):
         self._prefix = f'{prefix}:dict'
 
     def __getitem__(self, k: str) -> str:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         return self._cf[key]
 
     def __setitem__(self, k: str, v: str) -> None:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._cf[key] = v
 
     def __delitem__(self, k: str):
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         if key in self._cf:
             self._cf.delete(key)
 
     def __contains__(self, k: str) -> bool:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         return key in self._cf
 
@@ -105,18 +106,12 @@ class KonlDict(KonlDictReader, KonlDictWriter):
         it.seek(self._prefix)
 
         while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            yield self.__remove_prefix(it.key()), it.value()
+            yield self.remove_prefix(it.key()), it.value()
             it.next()
 
     def update(self, d: typing.Dict):
         for k, v in d.items():
             self.__setitem__(k, v)
-
-    def __build_key_name(self, k: str) -> str:
-        return f'{self._prefix}:{k}'
-
-    def __remove_prefix(self, key_with_prefix: str) -> str:
-        return key_with_prefix.replace(self._prefix + ":", "")
 
     def toView(self):
         iter = self._cf.iter()
@@ -130,18 +125,15 @@ class KonlDictWriteBatch(KonlDictWriter):
         self._prefix = f'{prefix}:dict'
 
     def __setitem__(self, k: str, v: str) -> None:
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         self._wb[key] = v
 
     def __delitem__(self, k: str):
-        key = self.__build_key_name(k)
+        key = self.build_key_name(k)
 
         del self._wb[key]
 
     def update(self, d: typing.Dict):
         for k, v in d.items():
             self.__setitem__(k, v)
-
-    def __build_key_name(self, k: str) -> str:
-        return f'{self._prefix}:{k}'
