@@ -34,25 +34,42 @@ class KonlIndex:
 
     def index(self, document) -> int:
         with self._locks.get(self._name):
+            it = self._cf.iter()
+
             sanitized_document = self.sanitize(document)
             tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
                       if self.is_indexable(token)}
 
             last_document_id = 1
 
-            if _LAST_DOCUMENT_ID in self._cf:
-                last_document_id = self._cf[_LAST_DOCUMENT_ID] + 1
+            it.seek(_LAST_DOCUMENT_ID)
 
-            self._cf[_LAST_DOCUMENT_ID] = last_document_id
+            if it.valid() and it.key() == _LAST_DOCUMENT_ID:
+                last_document_id = it.value() + 1
+
+            wb = rocksdict.WriteBatch()
+
+            cf_handle = self._db.get_column_family_handle(self._name)
+            wb.set_default_column_family(cf_handle)
+
+            wb[_LAST_DOCUMENT_ID] = last_document_id
 
             key = self.__build_key_name(last_document_id)
 
-            self._cf[key] = document
-            self._cf[self.__build_token_name(last_document_id)] = tokens
-            size = self.__len__()
-            self.__set_len(size+1)
+            wb[key] = document
+            wb[self.__build_token_name(last_document_id)] = tokens
 
-            self._inverted_index.index(last_document_id, tokens)
+            it.seek(self._len_prefix)
+
+            if it.valid() and it.key() == self._len_prefix:
+                size = it.value()
+                wb[self._len_prefix]= size + 1
+            else:
+                wb[self._len_prefix] = last_document_id
+
+            self._inverted_index.toWriteBatch(wb).index(last_document_id, tokens)
+
+            self._cf.write(wb)
 
         return last_document_id
 

@@ -16,6 +16,22 @@ class TokenSearchMode(StrEnum):
     PHRASE = enum.auto()
 
 
+class KonlInvertedIndexWriteBatch:
+    def __init__(self, trie: KonlTrie, wb: rocksdict.WriteBatch):
+        self._wb = wb
+        self._trie = trie
+
+    def index(self, document_id: int, tokens: typing.Set[str]):
+        for token in tokens:
+            s_wb = KonlSetWriteBatch(self._wb, token)
+            s_wb.add(str(document_id))
+
+        trie_wb = self._trie.toWriteBatch(self._wb)
+
+        for token in tokens:
+            trie_wb.insert(token)
+
+
 class KonlInvertedIndex:
     def __init__(self, db: rocksdict.Rdict, name: str):
         self._db = db
@@ -37,6 +53,11 @@ class KonlInvertedIndex:
         self._cf.close()
         self._trie.close()
 
+    def toWriteBatch(self, wb: rocksdict.WriteBatch):
+        cf_handle = self._cf.get_column_family_handle(self._name)
+        wb.set_default_column_family(cf_handle)
+        return KonlInvertedIndexWriteBatch(self._trie, wb)
+
     def index(self, document_id: int, tokens: typing.Set[str]):
         wb = rocksdict.WriteBatch()
         cf_handle = self._db.get_column_family_handle(self._name)
@@ -46,10 +67,7 @@ class KonlInvertedIndex:
             s_wb = KonlSetWriteBatch(wb, token)
             s_wb.add(str(document_id))
 
-        trie_wb = self._trie.toWriteBatch(wb)
-
-        for token in tokens:
-            trie_wb.insert(token)
+            self._trie.insert(token)
 
         self._cf.write(wb)
 
