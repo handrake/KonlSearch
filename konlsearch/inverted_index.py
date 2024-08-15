@@ -13,6 +13,7 @@ from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 class TokenSearchMode(StrEnum):
     AND = enum.auto()
     OR = enum.auto()
+    PHRASE = enum.auto()
 
 
 class KonlInvertedIndex:

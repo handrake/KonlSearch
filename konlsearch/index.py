@@ -1,6 +1,7 @@
 import re
 import typing
 import threading
+import itertools
 
 import mecab
 import rocksdict
@@ -123,7 +124,20 @@ class KonlIndex:
 
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
-        return self._inverted_index.search(tokens, mode)
+        if mode != TokenSearchMode.PHRASE:
+            return self._inverted_index.search(tokens, mode)
+
+        result = self._inverted_index.search(tokens, TokenSearchMode.AND)
+
+        sanitized_tokens = self.__tokenize_with_order(" ".join(tokens))
+
+        tokens_with_ids = [(response["id"], self.__tokenize_with_order(response["document"])) for response in self.get_multi(result)]
+
+        return [tokens_with_id[0] for tokens_with_id in tokens_with_ids if all(x <= y for x, y in itertools.pairwise([tokens_with_id[1].index(token) for token in sanitized_tokens]))]
+
+    def __tokenize_with_order(self, document) -> typing.List[str]:
+        sanitized_document = self.sanitize(document)
+        return [token for token in list(mecab.morphs(sanitized_document)) if self.is_indexable(token)]
 
     def search_suggestions(self, prefix: str) -> typing.List[str]:
         return self._inverted_index.search_suggestions(prefix)

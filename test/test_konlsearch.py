@@ -189,6 +189,16 @@ def test_search_mode_and(index):
     assert document_ids == [9]
 
 
+def test_search_mode_phrase(index):
+    document_ids = index.search(["마법", "특별"], TokenSearchMode.PHRASE)
+
+    assert document_ids == [9]
+
+    document_ids = index.search(["특별", "마법"], TokenSearchMode.PHRASE)
+
+    assert document_ids == []
+
+
 def test_index_len(index):
     assert len(index) == 132
 
@@ -216,6 +226,7 @@ def test_index_get_range(index):
     document_ids = [document["id"] for document in result]
 
     assert document_ids == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+
 
 def test_index_get_multi(index):
     result = index.get_multi([10, 15, 20, 1000])
