@@ -118,11 +118,13 @@ class KonlIndex:
     def __set_len(self, size: int):
         self._cf[self._len_prefix] = size
 
-    def __remove_prefix(self, key_with_prefix: str) -> str:
-        return key_with_prefix.replace(self._prefix + ":", "")
+    def __remove_prefix(self, key_with_prefix: str) -> int:
+        document_id_x = key_with_prefix.replace(self._prefix + ":", "")
+        return int(document_id_x, 16)
 
     def __build_key_name(self, document_id) -> str:
-        return f'{self._prefix}:{document_id}'
+        document_id_s = f'{document_id:x}'.rjust(10, '0')
+        return f'{self._prefix}:{document_id_s}'
 
     @staticmethod
     def __build_token_name(document_id) -> str:
