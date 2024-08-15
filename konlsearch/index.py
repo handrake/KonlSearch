@@ -28,6 +28,12 @@ class KonlIndexWriter(abc.ABC):
         document_id_s = f'{document_id:x}'.rjust(10, '0')
         return f'{self._prefix}:{document_id_s}'
 
+    def tokenize(self, document) -> typing.Set[str]:
+        sanitized_document = self.sanitize(document)
+
+        return {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
+                if self.is_indexable(token)}
+
     @staticmethod
     def build_token_name(document_id) -> str:
         return f'{document_id}:tokens'
@@ -66,9 +72,7 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         with self._locks.get(self._name):
             it = self._iter
 
-            sanitized_document = self.sanitize(document)
-            tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
-                      if self.is_indexable(token)}
+            tokens = self.tokenize(document)
 
             last_document_id = 1
 
@@ -111,9 +115,7 @@ class KonlIndex(KonlIndexWriter):
 
     def index(self, document) -> int:
         with self._locks.get(self._name):
-            sanitized_document = self.sanitize(document)
-            tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
-                      if self.is_indexable(token)}
+            tokens = self.tokenize(document)
 
             last_document_id = 1
 
