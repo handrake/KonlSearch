@@ -2,8 +2,8 @@ import rocksdict
 import typing
 
 from . import utility
-from .dict import KonlDict, KonlDictView
-from .set import KonlSet, KonlSetView
+from .dict import KonlDict, KonlDictView, KonlDictWriteBatch
+from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 
 import hgtk
 
@@ -56,6 +56,57 @@ class KonlTrieView:
         return result_set
 
 
+class KonlTrieWriteBatch:
+    def __init__(self, cf: rocksdict.Rdict, wb: rocksdict.WriteBatch):
+        self._cf = cf
+        self._wb = wb
+
+        iter = self._cf.iter()
+
+        self._token_dict_view = KonlDictView(iter, _TOKEN_DICT)
+        self._token_reverse_dict_view = KonlDictView(iter, _TOKEN_REVERSE_DICT)
+        self._token_dict_wb = KonlDictWriteBatch(wb, _TOKEN_DICT)
+        self._token_reverse_dict_wb = KonlDictWriteBatch(wb, _TOKEN_REVERSE_DICT)
+
+    def insert(self, token) -> None:
+        decomposed_token = decompose_word(token)
+
+        for i in range(len(decomposed_token)):
+            s = decomposed_token[:i+1]
+
+            if len(s) >= 2:
+                s1 = s[:-1]
+                set_s1_wb = KonlSetWriteBatch(self._wb, s1)
+                set_s1_wb.add(s)
+
+        self._token_dict_wb[token] = decomposed_token
+        self._token_reverse_dict_wb[decomposed_token] = token
+
+    def index(self, tokens: typing.Set[str]):
+        for token in tokens:
+            self.insert(token)
+
+    def delete(self, token) -> None:
+        if token not in self._token_dict_view:
+            return
+
+        decomposed_token = decompose_word(token)
+
+        if decomposed_token not in self._token_reverse_dict_view:
+            return
+
+        for i in range(len(decomposed_token)-1, 1, -1):
+            s = decomposed_token[:i+1]
+
+            if len(s) >= 2:
+                s1 = s[:-1]
+                set_s1_wb = KonlSetWriteBatch(self._wb, s1)
+                set_s1_wb.remove(s)
+
+        del self._token_dict_wb[token]
+        del self._token_reverse_dict_wb[decomposed_token]
+
+
 class KonlTrie:
     def __init__(self, db: rocksdict.Rdict, name: str):
         self._name = build_trie_name(name)
@@ -68,6 +119,11 @@ class KonlTrie:
 
     def toView(self) -> KonlTrieView:
         return KonlTrieView(self._cf.iter())
+
+    def toWriteBatch(self, wb: rocksdict.WriteBatch) -> KonlTrieWriteBatch:
+        cf_handle = self._cf.get_column_family_handle(self._name)
+        wb.set_default_column_family(cf_handle)
+        return KonlTrieWriteBatch(self._cf, wb)
 
     def insert(self, token) -> None:
         if token in self._token_dict:

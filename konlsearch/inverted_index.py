@@ -6,7 +6,7 @@ from strenum import StrEnum
 
 from . import utility
 
-from .trie import KonlTrie
+from .trie import KonlTrie, KonlTrieWriteBatch
 from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 
 
@@ -46,7 +46,10 @@ class KonlInvertedIndex:
             s_wb = KonlSetWriteBatch(wb, token)
             s_wb.add(str(document_id))
 
-            self._trie.insert(token)
+        trie_wb = self._trie.toWriteBatch(wb)
+
+        for token in tokens:
+            trie_wb.insert(token)
 
         self._cf.write(wb)
 
