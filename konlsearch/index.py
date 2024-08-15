@@ -93,6 +93,27 @@ class KonlIndex:
 
         return result
 
+    def get_range(self, start_id: int, end_id: int) -> typing.List[IndexGetResponseType]:
+        if end_id <= start_id:
+            return []
+
+        it = self._cf.iter()
+
+        start_key = self.__build_key_name(start_id)
+        end_key = self.__build_key_name(end_id)
+
+        it.seek(start_key)
+
+        result = []
+
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and self.__remove_prefix(it.key()) < end_id:
+            r = IndexGetResponseType(id=int(self.__remove_prefix(it.key())), document=it.value())
+            result.append(r)
+            it.next()
+
+        return result
+
+
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.__build_token_name(document_id)]
 

@@ -208,6 +208,15 @@ def test_index_get_all(index):
     assert len(result) == 132 and len(index) == 130
 
 
+def test_index_get_range(index):
+    index.delete(20)
+
+    result = index.get_range(10, 20)
+
+    document_ids = [document["id"] for document in result]
+
+    assert document_ids == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+
 def test_inverted_index_delete(index):
     token = "다이아몬드"
 
