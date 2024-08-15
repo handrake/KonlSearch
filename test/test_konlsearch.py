@@ -199,6 +199,12 @@ def test_search_mode_phrase(index):
     assert document_ids == []
 
 
+def test_index_writebatch(index):
+    index.toWriteBatch().index("기동전사 건담")
+
+    assert len(index) == 133
+
+
 def test_index_len(index):
     assert len(index) == 132
 

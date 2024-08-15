@@ -1,3 +1,4 @@
+import abc
 import re
 import typing
 import threading
@@ -22,19 +23,48 @@ class IndexGetResponseType(typing.TypedDict):
     document: str
 
 
-class KonlIndex:
-    def __init__(self, db: rocksdict.Rdict, name: str):
-        self._db = db
+class KonlIndexWriter(abc.ABC):
+    def build_key_name(self, document_id) -> str:
+        document_id_s = f'{document_id:x}'.rjust(10, '0')
+        return f'{self._prefix}:{document_id_s}'
+
+    @staticmethod
+    def build_token_name(document_id) -> str:
+        return f'{document_id}:tokens'
+
+    @staticmethod
+    def sanitize(document):
+        return ''.join(ch for ch in document if ch not in _SPECIAL_CHARACTERS)
+
+    @staticmethod
+    def is_hangul(s) -> bool:
+        p = re.compile('[가-힣]+')
+        return p.fullmatch(s) is not None
+
+    @staticmethod
+    def is_alpha(s) -> bool:
+        p = re.compile('[a-zA-Z]+')
+        return p.fullmatch(s) is not None
+
+    @staticmethod
+    def is_indexable(token):
+        return KonlIndex.is_alpha(token) or KonlIndex.is_hangul(token)
+
+
+class KonlIndexWriteBatch(KonlIndexWriter):
+    def __init__(self, cf: rocksdict.Rdict, wb: rocksdict.WriteBatch, inverted_index: KonlInvertedIndex, name: str, locks: StripedLock):
+        self._cf = cf
+        self._iter = self._cf.iter()
+        self._wb = wb
         self._name = name
-        self._cf = utility.create_or_get_cf(db, name)
-        self._inverted_index = KonlInvertedIndex(db, name)
-        self._locks = StripedLock(threading.Lock, 10)
+        self._inverted_index = inverted_index
+        self._locks = locks
         self._prefix = f'{name}:document'
         self._len_prefix = f'{name}:__len__:document'
 
-    def index(self, document) -> int:
+    def index(self, document):
         with self._locks.get(self._name):
-            it = self._cf.iter()
+            it = self._iter
 
             sanitized_document = self.sanitize(document)
             tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
@@ -47,47 +77,83 @@ class KonlIndex:
             if it.valid() and it.key() == _LAST_DOCUMENT_ID:
                 last_document_id = it.value() + 1
 
-            wb = rocksdict.WriteBatch()
+            self._wb[_LAST_DOCUMENT_ID] = last_document_id
 
-            cf_handle = self._db.get_column_family_handle(self._name)
-            wb.set_default_column_family(cf_handle)
+            key = self.build_key_name(last_document_id)
 
-            wb[_LAST_DOCUMENT_ID] = last_document_id
-
-            key = self.__build_key_name(last_document_id)
-
-            wb[key] = document
-            wb[self.__build_token_name(last_document_id)] = tokens
+            self._wb[key] = document
+            self._wb[self.build_token_name(last_document_id)] = tokens
 
             it.seek(self._len_prefix)
 
             if it.valid() and it.key() == self._len_prefix:
                 size = it.value()
-                wb[self._len_prefix]= size + 1
+                self._wb[self._len_prefix]= size + 1
             else:
-                wb[self._len_prefix] = last_document_id
+                self._wb[self._len_prefix] = last_document_id
 
-            self._inverted_index.toWriteBatch(wb).index(last_document_id, tokens)
+            self._inverted_index.toWriteBatch(self._wb).index(last_document_id, tokens)
 
-            self._cf.write(wb)
+            self._cf.write(self._wb)
 
         return last_document_id
 
+
+class KonlIndex(KonlIndexWriter):
+    def __init__(self, db: rocksdict.Rdict, name: str):
+        self._db = db
+        self._name = name
+        self._cf = utility.create_or_get_cf(db, name)
+        self._inverted_index = KonlInvertedIndex(db, name)
+        self._locks = StripedLock(threading.Lock, 10)
+        self._prefix = f'{name}:document'
+        self._len_prefix = f'{name}:__len__:document'
+
+    def index(self, document) -> int:
+        with self._locks.get(self._name):
+            sanitized_document = self.sanitize(document)
+            tokens = {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
+                      if self.is_indexable(token)}
+
+            last_document_id = 1
+
+            if _LAST_DOCUMENT_ID in self._cf:
+                last_document_id = self._cf[_LAST_DOCUMENT_ID] + 1
+
+            self._cf[_LAST_DOCUMENT_ID] = last_document_id
+
+            key = self.build_key_name(last_document_id)
+
+            self._cf[key] = document
+            self._cf[self.build_token_name(last_document_id)] = tokens
+            size = self.__len__()
+            self.__set_len(size+1)
+
+            self._inverted_index.index(last_document_id, tokens)
+
+        return last_document_id
+
+    def toWriteBatch(self):
+        wb = rocksdict.WriteBatch()
+        cf_handle = self._cf.get_column_family_handle(self._name)
+        wb.set_default_column_family(cf_handle)
+        return KonlIndexWriteBatch(self._cf, wb, self._inverted_index, self._name, self._locks)
+
     def delete(self, document_id) -> None:
         with self._locks.get(self._name):
-            document_id_key = self.__build_key_name(document_id)
+            document_id_key = self.build_key_name(document_id)
 
             if document_id_key not in self._cf:
                 raise KeyError
 
-            token_name = self.__build_token_name(document_id)
+            token_name = self.build_token_name(document_id)
             tokens = self._cf[token_name]
 
             self._inverted_index.delete(document_id, tokens)
 
             self._cf.delete(token_name)
 
-            document_id_key = self.__build_key_name(document_id)
+            document_id_key = self.build_key_name(document_id)
             self._cf.delete(document_id_key)
 
             size = self.__len__()
@@ -95,7 +161,7 @@ class KonlIndex:
                 self.__set_len(size-1)
 
     def get(self, document_id) -> IndexGetResponseType:
-        document_id_key = self.__build_key_name(document_id)
+        document_id_key = self.build_key_name(document_id)
         return IndexGetResponseType(id=document_id, document=self._cf[document_id_key])
 
     def get_all(self) -> typing.List[IndexGetResponseType]:
@@ -117,8 +183,8 @@ class KonlIndex:
 
         it = self._cf.iter()
 
-        start_key = self.__build_key_name(start_id)
-        end_key = self.__build_key_name(end_id)
+        start_key = self.build_key_name(start_id)
+        end_key = self.build_key_name(end_id)
 
         it.seek(start_key)
 
@@ -132,12 +198,12 @@ class KonlIndex:
         return result
 
     def get_multi(self, document_ids: typing.List[int]) -> typing.List[IndexGetResponseType]:
-        keys = [self.__build_key_name(document_id) for document_id in document_ids]
+        keys = [self.build_key_name(document_id) for document_id in document_ids]
 
         return [IndexGetResponseType(id=document_ids[i], document=document) for i, document in enumerate(self._cf[keys]) if document]
 
     def get_tokens(self, document_id) -> typing.Set[str]:
-        return self._cf[self.__build_token_name(document_id)]
+        return self._cf[self.build_token_name(document_id)]
 
     # noinspection PyBroadException
     def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
@@ -177,29 +243,3 @@ class KonlIndex:
     def __remove_prefix(self, key_with_prefix: str) -> int:
         document_id_x = key_with_prefix.replace(self._prefix + ":", "")
         return int(document_id_x, 16)
-
-    def __build_key_name(self, document_id) -> str:
-        document_id_s = f'{document_id:x}'.rjust(10, '0')
-        return f'{self._prefix}:{document_id_s}'
-
-    @staticmethod
-    def __build_token_name(document_id) -> str:
-        return f'{document_id}:tokens'
-
-    @staticmethod
-    def is_hangul(s) -> bool:
-        p = re.compile('[가-힣]+')
-        return p.fullmatch(s) is not None
-
-    @staticmethod
-    def is_alpha(s) -> bool:
-        p = re.compile('[a-zA-Z]+')
-        return p.fullmatch(s) is not None
-
-    @staticmethod
-    def is_indexable(token):
-        return KonlIndex.is_alpha(token) or KonlIndex.is_hangul(token)
-
-    @staticmethod
-    def sanitize(document):
-        return ''.join(ch for ch in document if ch not in _SPECIAL_CHARACTERS)
