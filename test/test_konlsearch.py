@@ -2,6 +2,7 @@ from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
+from konlsearch import utility
 
 import pytest
 import rocksdict
