@@ -218,7 +218,7 @@ class KonlIndex(KonlIndexWriter):
 
         tokens_with_ids = [(response["id"], self.__tokenize_with_order(response["document"])) for response in self.get_multi(result)]
 
-        return [tokens_with_id[0] for tokens_with_id in tokens_with_ids if all(x <= y for x, y in itertools.pairwise([tokens_with_id[1].index(token) for token in sanitized_tokens]))]
+        return [tokens_with_id[0] for tokens_with_id in tokens_with_ids if utility.is_sorted([tokens_with_id[1].index(token) for token in sanitized_tokens])]
 
     def __tokenize_with_order(self, document) -> typing.List[str]:
         sanitized_document = self.sanitize(document)
