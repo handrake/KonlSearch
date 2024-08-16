@@ -2,6 +2,7 @@ from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
+from konlsearch.log import KonlSearchLog, SearchLogDto
 from konlsearch import utility
 
 import pytest
@@ -402,3 +403,17 @@ def test_get_all_indexes(konl_search, index):
     indexes = sorted(konl_search.get_all_indexes())
 
     assert indexes == ["title"]
+
+
+def test_search_log(index):
+    tokens = list(index.get_tokens(10))
+
+    requests = [SearchLogDto(size=1, token=token) for token in tokens]
+
+    log = KonlSearchLog(index._cf)
+
+    log.append_multi(requests)
+
+    r = log.get_range(1, 10)
+
+    assert tokens == [x["token"] for x in r]
