@@ -100,13 +100,10 @@ class KonlInvertedIndex:
 
             document_ids = {int(e) for e in s.items()}
 
-            if mode == TokenSearchMode.OR:
+            if mode == TokenSearchMode.OR or i == 0:
                 result_set.update(document_ids)
             elif mode == TokenSearchMode.AND:
-                if i == 0:
-                    result_set.update(document_ids)
-                else:
-                    result_set.intersection_update(document_ids)
+                result_set.intersection_update(document_ids)
 
         return sorted(list(result_set))
 
