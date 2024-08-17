@@ -16,7 +16,7 @@ class SearchLogDto(typing.TypedDict):
 class KonlSearchLog:
     def __init__(self, cf: rocksdict.Rdict):
         self._cf = cf
-        self._prefix = f'access'
+        self._prefix = "access"
         self._last_second = int(datetime.datetime.now().timestamp())
         self._seq_id_generator = itertools.count(1)
 
@@ -50,8 +50,11 @@ class KonlSearchLog:
 
         result = []
 
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and self.__get_timestamp_from_key(it.key()) < str(end_timestamp):
-            r = SearchLogDto(token=self.__get_token_from_key(it.key()), size=it.value())
+        while (it.valid() and type(it.key()) == str and
+               it.key().startswith(self._prefix) and it.key() < end_key):
+            r = SearchLogDto(
+                token=self.__get_token_from_key(it.key()), size=it.value()
+            )
             result.append(r)
             it.next()
 

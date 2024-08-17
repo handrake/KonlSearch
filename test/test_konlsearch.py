@@ -1,9 +1,10 @@
+# flake8: noqa: E501
+
 from konlsearch.search import KonlSearch
 from konlsearch.index import TokenSearchMode
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogDto
-from konlsearch import utility
 
 import datetime
 import pytest

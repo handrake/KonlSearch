@@ -2,7 +2,6 @@ import abc
 import re
 import typing
 import threading
-import itertools
 
 import mecab
 import rocksdict
@@ -31,7 +30,9 @@ class KonlIndexWriter(abc.ABC):
     def tokenize(self, document) -> typing.Set[str]:
         sanitized_document = self.sanitize(document)
 
-        return {token for token in set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split()))
+        return {token for token in
+                set(mecab.morphs(sanitized_document))
+                .union(set(sanitized_document.split()))
                 if self.is_indexable(token)}
 
     @staticmethod
@@ -58,7 +59,10 @@ class KonlIndexWriter(abc.ABC):
 
 
 class KonlIndexWriteBatch(KonlIndexWriter):
-    def __init__(self, cf: rocksdict.Rdict, wb: rocksdict.WriteBatch, inverted_index: KonlInvertedIndex, name: str, locks: StripedLock):
+    def __init__(self, cf: rocksdict.Rdict,
+                 wb: rocksdict.WriteBatch,
+                 inverted_index: KonlInvertedIndex,
+                 name: str, locks: StripedLock):
         self._cf = cf
         self._iter = self._cf.iter()
         self._wb = wb
@@ -69,7 +73,7 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         self._len_prefix = f'{name}:__len__:document'
 
     def index(self, document):
-        with self._locks.get(self._name):
+        with (self._locks.get(self._name)):
             it = self._iter
 
             tokens = self.tokenize(document)
@@ -92,11 +96,12 @@ class KonlIndexWriteBatch(KonlIndexWriter):
 
             if it.valid() and it.key() == self._len_prefix:
                 size = it.value()
-                self._wb[self._len_prefix]= size + 1
+                self._wb[self._len_prefix] = size + 1
             else:
                 self._wb[self._len_prefix] = last_document_id
 
-            self._inverted_index.to_write_batch(self._wb).index(last_document_id, tokens)
+            inverted_index_wb = self._inverted_index.to_write_batch(self._wb)
+            inverted_index_wb.index(last_document_id, tokens)
 
             self._cf.write(self._wb)
 
@@ -139,7 +144,9 @@ class KonlIndex(KonlIndexWriter):
         wb = rocksdict.WriteBatch()
         cf_handle = self._cf.get_column_family_handle(self._name)
         wb.set_default_column_family(cf_handle)
-        return KonlIndexWriteBatch(self._cf, wb, self._inverted_index, self._name, self._locks)
+        return KonlIndexWriteBatch(
+            self._cf, wb, self._inverted_index, self._name, self._locks
+        )
 
     def delete(self, document_id) -> None:
         with self._locks.get(self._name):
@@ -164,7 +171,9 @@ class KonlIndex(KonlIndexWriter):
 
     def get(self, document_id) -> IndexGetResponseType:
         document_id_key = self.build_key_name(document_id)
-        return IndexGetResponseType(id=document_id, document=self._cf[document_id_key])
+        return IndexGetResponseType(
+            id=document_id, document=self._cf[document_id_key]
+        )
 
     def get_all(self) -> typing.List[IndexGetResponseType]:
         it = self._cf.iter()
@@ -172,14 +181,18 @@ class KonlIndex(KonlIndexWriter):
 
         result = []
 
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
-            r = IndexGetResponseType(id=int(self.__remove_prefix(it.key())), document=it.value())
+        while (it.valid() and type(it.key()) == str and
+               it.key().startswith(self._prefix)):
+            r = IndexGetResponseType(
+                id=int(self.__remove_prefix(it.key())), document=it.value()
+            )
             result.append(r)
             it.next()
 
         return result
 
-    def get_range(self, start_id: int, end_id: int) -> typing.List[IndexGetResponseType]:
+    def get_range(self, start_id: int,
+                  end_id: int) -> typing.List[IndexGetResponseType]:
         if end_id <= start_id:
             return []
 
@@ -192,23 +205,36 @@ class KonlIndex(KonlIndexWriter):
 
         result = []
 
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and self.__remove_prefix(it.key()) < end_id:
-            r = IndexGetResponseType(id=int(self.__remove_prefix(it.key())), document=it.value())
+        while (it.valid() and type(it.key()) == str and
+               it.key().startswith(self._prefix) and it.key() < end_key):
+            r = IndexGetResponseType(
+                id=int(self.__remove_prefix(it.key())), document=it.value()
+            )
             result.append(r)
             it.next()
 
         return result
 
-    def get_multi(self, document_ids: typing.List[int]) -> typing.List[IndexGetResponseType]:
-        keys = [self.build_key_name(document_id) for document_id in document_ids]
+    def get_multi(
+            self,
+            document_ids: typing.List[int]
+    ) -> typing.List[IndexGetResponseType]:
+        keys = [self.build_key_name(document_id)
+                for document_id in document_ids]
 
-        return [IndexGetResponseType(id=document_ids[i], document=document) for i, document in enumerate(self._cf[keys]) if document]
+        return [IndexGetResponseType(
+            id=document_ids[i], document=document
+        ) for i, document in enumerate(self._cf[keys]) if document]
 
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.build_token_name(document_id)]
 
     # noinspection PyBroadException
-    def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
+    def search(
+            self,
+            tokens: typing.List[str],
+            mode: TokenSearchMode
+    ) -> typing.List[int]:
         if mode != TokenSearchMode.PHRASE:
             return self._inverted_index.search(tokens, mode)
 
@@ -216,13 +242,19 @@ class KonlIndex(KonlIndexWriter):
 
         sanitized_tokens = self.__tokenize_with_order(" ".join(tokens))
 
-        tokens_with_ids = [(response["id"], self.__tokenize_with_order(response["document"])) for response in self.get_multi(result)]
+        tokens_with_ids = [(response["id"],
+                            self.__tokenize_with_order(response["document"]))
+                           for response in self.get_multi(result)]
 
-        return [tokens_with_id[0] for tokens_with_id in tokens_with_ids if utility.is_sorted([tokens_with_id[1].index(token) for token in sanitized_tokens])]
+        return [tokens_with_id[0]
+                for tokens_with_id in tokens_with_ids
+                if utility.is_sorted([tokens_with_id[1].index(token)
+                                      for token in sanitized_tokens])]
 
     def __tokenize_with_order(self, document) -> typing.List[str]:
         sanitized_document = self.sanitize(document)
-        return [token for token in list(mecab.morphs(sanitized_document)) if self.is_indexable(token)]
+        return [token for token in list(mecab.morphs(sanitized_document))
+                if self.is_indexable(token)]
 
     def search_suggestions(self, prefix: str) -> typing.List[str]:
         return self._inverted_index.search_suggestions(prefix)

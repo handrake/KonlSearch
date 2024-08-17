@@ -32,7 +32,8 @@ class KonlSetReader(AbstractKonlSet):
             it = self._cf.iter()
         it.seek(self._prefix)
 
-        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+        while (it.valid() and type(it.key()) == str and
+               it.key().startswith(self._prefix)):
             yield self.remove_prefix(it.key())
             it.next()
 

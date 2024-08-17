@@ -22,7 +22,9 @@ def decompose_word(word: str) -> str:
 class KonlTrieView:
     def __init__(self, iter: rocksdict.RdictIter):
         self._iter = iter
-        self._token_reverse_dict = KonlDictView(self._iter, _TOKEN_REVERSE_DICT)
+        self._token_reverse_dict = KonlDictView(
+            self._iter, _TOKEN_REVERSE_DICT
+        )
 
     def search(self, prefix: str) -> typing.List[str]:
         decomposed_prefix = decompose_word(prefix)
@@ -66,7 +68,9 @@ class KonlTrieWriteBatch:
         self._token_dict_view = KonlDictView(iter, _TOKEN_DICT)
         self._token_reverse_dict_view = KonlDictView(iter, _TOKEN_REVERSE_DICT)
         self._token_dict_wb = KonlDictWriteBatch(wb, _TOKEN_DICT)
-        self._token_reverse_dict_wb = KonlDictWriteBatch(wb, _TOKEN_REVERSE_DICT)
+        self._token_reverse_dict_wb = KonlDictWriteBatch(
+            wb, _TOKEN_REVERSE_DICT
+        )
 
     def insert(self, token) -> None:
         decomposed_token = decompose_word(token)

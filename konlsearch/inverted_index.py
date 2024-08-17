@@ -6,7 +6,7 @@ from strenum import StrEnum
 
 from . import utility
 
-from .trie import KonlTrie, KonlTrieWriteBatch
+from .trie import KonlTrie
 from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 
 
@@ -17,7 +17,12 @@ class TokenSearchMode(StrEnum):
 
 
 class KonlInvertedIndexWriteBatch:
-    def __init__(self, cf: rocksdict.Rdict, trie: KonlTrie, wb: rocksdict.WriteBatch):
+    def __init__(
+            self,
+            cf: rocksdict.Rdict,
+            trie: KonlTrie,
+            wb: rocksdict.WriteBatch
+    ):
         self._iter = cf.iter()
         self._wb = wb
         self._trie = trie
@@ -90,7 +95,11 @@ class KonlInvertedIndex:
                 self._trie.delete(token)
 
     # noinspection PyBroadException
-    def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
+    def search(
+            self,
+            tokens: typing.List[str],
+            mode: TokenSearchMode
+    ) -> typing.List[int]:
         result_set = set()
 
         iter = self._cf.iter()

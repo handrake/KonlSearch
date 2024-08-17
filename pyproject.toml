@@ -13,6 +13,7 @@ pytest = "^8.3.2"
 hgtk = "^0.2.1"
 pytest-profiling = "^1.7.0"
 strenum = "^0.4.15"
+flake8 = "^7.1.1"
 
 
 [build-system]
