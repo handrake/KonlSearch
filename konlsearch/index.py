@@ -1,4 +1,5 @@
 import abc
+from dataclasses import dataclass
 import re
 import typing
 import threading
@@ -17,9 +18,23 @@ _SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
 _LAST_DOCUMENT_ID = "last_document_id"
 
 
-class IndexGetResponseType(typing.TypedDict):
+@dataclass
+class IndexGetResponse:
     id: int
     document: str
+
+
+@dataclass
+class SearchGetRequest:
+    tokens: typing.List[str]
+    mode: TokenSearchMode
+
+
+@dataclass
+class ComplexSearchGetRequest:
+    condition1: typing.Union[SearchGetRequest, typing.Self]
+    condition2: typing.Union[SearchGetRequest, typing.Self]
+    mode: TokenSearchMode
 
 
 class KonlIndexWriter(abc.ABC):
@@ -169,13 +184,13 @@ class KonlIndex(KonlIndexWriter):
             if size > 0:
                 self.__set_len(size-1)
 
-    def get(self, document_id) -> IndexGetResponseType:
+    def get(self, document_id) -> IndexGetResponse:
         document_id_key = self.build_key_name(document_id)
-        return IndexGetResponseType(
+        return IndexGetResponse(
             id=document_id, document=self._cf[document_id_key]
         )
 
-    def get_all(self) -> typing.List[IndexGetResponseType]:
+    def get_all(self) -> typing.List[IndexGetResponse]:
         it = self._cf.iter()
         it.seek(self._prefix)
 
@@ -183,7 +198,7 @@ class KonlIndex(KonlIndexWriter):
 
         while (it.valid() and type(it.key()) == str and
                it.key().startswith(self._prefix)):
-            r = IndexGetResponseType(
+            r = IndexGetResponse(
                 id=int(self.__remove_prefix(it.key())), document=it.value()
             )
             result.append(r)
@@ -192,7 +207,7 @@ class KonlIndex(KonlIndexWriter):
         return result
 
     def get_range(self, start_id: int,
-                  end_id: int) -> typing.List[IndexGetResponseType]:
+                  end_id: int) -> typing.List[IndexGetResponse]:
         if end_id <= start_id:
             return []
 
@@ -207,7 +222,7 @@ class KonlIndex(KonlIndexWriter):
 
         while (it.valid() and type(it.key()) == str and
                it.key().startswith(self._prefix) and it.key() < end_key):
-            r = IndexGetResponseType(
+            r = IndexGetResponse(
                 id=int(self.__remove_prefix(it.key())), document=it.value()
             )
             result.append(r)
@@ -218,16 +233,40 @@ class KonlIndex(KonlIndexWriter):
     def get_multi(
             self,
             document_ids: typing.List[int]
-    ) -> typing.List[IndexGetResponseType]:
+    ) -> typing.List[IndexGetResponse]:
         keys = [self.build_key_name(document_id)
                 for document_id in document_ids]
 
-        return [IndexGetResponseType(
+        return [IndexGetResponse(
             id=document_ids[i], document=document
         ) for i, document in enumerate(self._cf[keys]) if document]
 
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.build_token_name(document_id)]
+
+    def search_complex(
+            self, request: ComplexSearchGetRequest
+    ) -> typing.List[int]:
+        if isinstance(request.condition1, ComplexSearchGetRequest):
+            result1 = self.search_complex(request.condition1)
+        else:
+            result1 = self.search(
+                request.condition1.tokens, request.condition1.mode
+            )
+
+        if isinstance(request.condition2, ComplexSearchGetRequest):
+            result2 = self.search_complex(request.condition2)
+        else:
+            result2 = self.search(
+                request.condition2.tokens, request.condition2.mode
+            )
+
+        if request.mode == TokenSearchMode.AND:
+            return sorted(set(result1).intersection(set(result2)))
+        elif request.mode == TokenSearchMode.OR:
+            return sorted(set(result1).union(set(result2)))
+        else:
+            return []
 
     # noinspection PyBroadException
     def search(
@@ -242,8 +281,8 @@ class KonlIndex(KonlIndexWriter):
 
         sanitized_tokens = self.__tokenize_with_order(" ".join(tokens))
 
-        tokens_with_ids = [(response["id"],
-                            self.__tokenize_with_order(response["document"]))
+        tokens_with_ids = [(response.id,
+                            self.__tokenize_with_order(response.document))
                            for response in self.get_multi(result)]
 
         return [tokens_with_id[0]

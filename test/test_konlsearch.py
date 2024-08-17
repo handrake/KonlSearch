@@ -1,7 +1,9 @@
 # flake8: noqa: E501
 
 from konlsearch.search import KonlSearch
-from konlsearch.index import TokenSearchMode
+from konlsearch.index import (TokenSearchMode,
+                              SearchGetRequest,
+                              ComplexSearchGetRequest)
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogDto
@@ -204,6 +206,31 @@ def test_search_mode_phrase(index):
     assert document_ids == []
 
 
+def test_search_mode_complex(index):
+    request = ComplexSearchGetRequest(
+        condition1=SearchGetRequest(
+            tokens=["같은", "비스크"],
+            mode=TokenSearchMode.OR
+        ),
+        condition2=ComplexSearchGetRequest(
+            condition1=SearchGetRequest(
+                tokens=["거신병", "경비실"],
+                mode=TokenSearchMode.OR
+            ),
+            condition2=SearchGetRequest(
+                tokens=["마법", "특별"],
+                mode=TokenSearchMode.PHRASE
+            ),
+            mode=TokenSearchMode.OR
+        ),
+        mode=TokenSearchMode.OR
+    )
+
+    document_ids = index.search_complex(request)
+
+    assert document_ids == [1, 3, 9, 10, 18, 81]
+
+
 def test_index_writebatch(index):
     index.to_write_batch().index("기동전사 건담")
 
@@ -233,7 +260,7 @@ def test_index_len(index):
 def test_index_get(index):
     r = index.get(10)
 
-    assert r["id"] == 10 and r["document"] == '그 비스크 돌은 사랑을 한다'
+    assert r.id == 10 and r.document == '그 비스크 돌은 사랑을 한다'
 
 
 def test_index_get_all(index):
@@ -250,7 +277,7 @@ def test_index_get_range(index):
 
     result = index.get_range(10, 20)
 
-    document_ids = [document["id"] for document in result]
+    document_ids = [document.id for document in result]
 
     assert document_ids == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
@@ -258,7 +285,7 @@ def test_index_get_range(index):
 def test_index_get_multi(index):
     result = index.get_multi([10, 15, 20, 1000])
 
-    document_ids = [document["id"] for document in result]
+    document_ids = [document.id for document in result]
 
     assert document_ids == [10, 15, 20]
 
