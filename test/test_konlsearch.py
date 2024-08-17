@@ -5,6 +5,7 @@ from konlsearch.dict import KonlDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogDto
 from konlsearch import utility
 
+import datetime
 import pytest
 import rocksdict
 
@@ -406,6 +407,8 @@ def test_get_all_indexes(konl_search, index):
 
 
 def test_search_log(index):
+    ts1 = int(datetime.datetime.now().timestamp())
+
     tokens = list(index.get_tokens(10))
 
     requests = [SearchLogDto(size=1, token=token) for token in tokens]
@@ -414,6 +417,8 @@ def test_search_log(index):
 
     log.append_multi(requests)
 
-    r = log.get_range(1, 10)
+    ts2 = int(datetime.datetime.now().timestamp())
+
+    r = log.get_range(ts1 - 10, ts2 + 10)
 
     assert tokens == [x["token"] for x in r]
