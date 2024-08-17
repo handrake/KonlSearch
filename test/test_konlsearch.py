@@ -3,7 +3,8 @@
 from konlsearch.search import KonlSearch
 from konlsearch.index import (TokenSearchMode,
                               SearchGetRequest,
-                              ComplexSearchGetRequest)
+                              ComplexSearchGetRequest,
+                              SearchMode)
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogDto
@@ -221,9 +222,9 @@ def test_search_mode_complex(index):
                 tokens=["마법", "특별"],
                 mode=TokenSearchMode.PHRASE
             ),
-            mode=TokenSearchMode.OR
+            mode=SearchMode.OR
         ),
-        mode=TokenSearchMode.OR
+        mode=SearchMode.OR
     )
 
     document_ids = index.search_complex(request)

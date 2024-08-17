@@ -1,5 +1,6 @@
 import abc
 from dataclasses import dataclass
+import enum
 import re
 import typing
 import typing_extensions
@@ -7,6 +8,8 @@ import threading
 
 import mecab
 import rocksdict
+
+from strenum import StrEnum
 
 from . import utility
 from .inverted_index import KonlInvertedIndex, TokenSearchMode
@@ -17,6 +20,11 @@ mecab = mecab.MeCab()
 
 _SPECIAL_CHARACTERS = '@_!#$%^&*()<>?/\\|}{~:]",'
 _LAST_DOCUMENT_ID = "last_document_id"
+
+
+class SearchMode(StrEnum):
+    AND = enum.auto()
+    OR = enum.auto()
 
 
 @dataclass
@@ -35,7 +43,7 @@ class SearchGetRequest:
 class ComplexSearchGetRequest:
     condition1: typing.Union[SearchGetRequest, typing_extensions.Self]
     condition2: typing.Union[SearchGetRequest, typing_extensions.Self]
-    mode: TokenSearchMode
+    mode: SearchMode
 
 
 class KonlIndexWriter(abc.ABC):
@@ -262,9 +270,9 @@ class KonlIndex(KonlIndexWriter):
                 request.condition2.tokens, request.condition2.mode
             )
 
-        if request.mode == TokenSearchMode.AND:
+        if request.mode == SearchMode.AND:
             return sorted(set(result1).intersection(set(result2)))
-        elif request.mode == TokenSearchMode.OR:
+        elif request.mode == SearchMode.OR:
             return sorted(set(result1).union(set(result2)))
         else:
             return []
