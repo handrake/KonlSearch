@@ -453,7 +453,7 @@ def test_search_log(index):
 
     r = log.get_range(ts1 - 10, ts2 + 10)
 
-    assert tokens == sorted([x["token"] for x in r])
+    assert tokens == sorted([x.token for x in r])
 
     time.sleep(1)
 

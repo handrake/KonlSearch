@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import datetime
 import itertools
 import typing
@@ -5,7 +6,8 @@ import typing
 import rocksdict
 
 
-class SearchLogDto(typing.TypedDict):
+@dataclass
+class SearchLogDto:
     size: int
     token: str
 
@@ -35,7 +37,7 @@ class KonlSearchLog:
 
     def append_multi(self, requests: typing.List[SearchLogDto]):
         for request in requests:
-            self.append(request["token"], request["size"])
+            self.append(request.token, request.size)
 
     def get_range(self, start_timestamp, end_timestamp):
         if end_timestamp <= start_timestamp:
