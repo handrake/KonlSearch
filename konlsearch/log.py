@@ -5,9 +5,6 @@ import typing
 import rocksdict
 
 
-_LAST_LOG_ID = "last_log_id"
-
-
 class SearchLogDto(typing.TypedDict):
     size: int
     token: str
