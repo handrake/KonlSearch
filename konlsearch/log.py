@@ -24,7 +24,9 @@ class KonlSearchLog:
             self._seq_count_generator = itertools.count(1)
             self._last_second = ts
 
-        return f'{ts}:{str(next(self._seq_count_generator)).rjust(4, '0')}'
+        seq_count_s = str(next(self._seq_count_generator)).rjust(4, '0')
+
+        return f'{ts}:{seq_count_s}'
 
     def append(self, token: str, size: int) -> None:
         seq_id = self.generate_seq_id()
