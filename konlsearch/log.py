@@ -15,18 +15,19 @@ class KonlSearchLog:
         self._cf = cf
         self._prefix = "access"
         self._last_second = int(datetime.datetime.now().timestamp())
-        self._seq_id_generator = itertools.count(1)
+        self._seq_count_generator = itertools.count(1)
 
-    def __get_seq_id(self) -> int:
+    def generate_seq_id(self) -> int:
         ts = int(datetime.datetime.now().timestamp())
 
         if self._last_second != ts:
-            self._seq_id_generator = itertools.count(1)
+            self._seq_count_generator = itertools.count(1)
+            self._last_second = ts
 
-        return f'{ts}:{next(self._seq_id_generator)}'
+        return f'{ts}:{next(self._seq_count_generator)}'
 
     def append(self, token: str, size: int) -> None:
-        seq_id = self.__get_seq_id()
+        seq_id = self.generate_seq_id()
         key = self.__build_key_name(seq_id, token)
         self._cf[key] = size
 

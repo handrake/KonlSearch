@@ -8,6 +8,7 @@ from konlsearch.log import KonlSearchLog, SearchLogDto
 
 import datetime
 import pytest
+import time
 import rocksdict
 
 title_document = '''
@@ -410,11 +411,13 @@ def test_get_all_indexes(konl_search, index):
 def test_search_log(index):
     ts1 = int(datetime.datetime.now().timestamp())
 
-    tokens = list(index.get_tokens(10))
+    tokens = sorted(list(index.get_tokens(10)))
 
     requests = [SearchLogDto(size=1, token=token) for token in tokens]
 
     log = KonlSearchLog(index._cf)
+
+    seq_id1 = log.generate_seq_id()
 
     log.append_multi(requests)
 
@@ -422,4 +425,12 @@ def test_search_log(index):
 
     r = log.get_range(ts1 - 10, ts2 + 10)
 
-    assert tokens == [x["token"] for x in r]
+    assert tokens == sorted([x["token"] for x in r])
+
+    time.sleep(1)
+
+    seq_id2 = log.generate_seq_id()
+    seq_id3 = log.generate_seq_id()
+
+    assert seq_id1.split(":")[1] == seq_id2.split(":")[1]
+    assert seq_id3.split(":")[1] == '2'
