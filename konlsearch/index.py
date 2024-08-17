@@ -2,6 +2,7 @@ import abc
 from dataclasses import dataclass
 import re
 import typing
+import typing_extensions
 import threading
 
 import mecab
@@ -32,8 +33,8 @@ class SearchGetRequest:
 
 @dataclass
 class ComplexSearchGetRequest:
-    condition1: typing.Union[SearchGetRequest, typing.Self]
-    condition2: typing.Union[SearchGetRequest, typing.Self]
+    condition1: typing.Union[SearchGetRequest, typing_extensions.Self]
+    condition2: typing.Union[SearchGetRequest, typing_extensions.Self]
     mode: TokenSearchMode
 
 
