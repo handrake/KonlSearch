@@ -433,4 +433,4 @@ def test_search_log(index):
     seq_id3 = log.generate_seq_id()
 
     assert seq_id1.split(":")[1] == seq_id2.split(":")[1]
-    assert seq_id3.split(":")[1] == '2'
+    assert seq_id3.split(":")[1] == '0002'
