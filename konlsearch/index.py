@@ -38,10 +38,29 @@ class IndexingStatusCode(StrEnum):
     CONFLICT = enum.auto()
 
 
+class GetStatusCode(StrEnum):
+    SUCCESS = enum.auto()
+    FAILURE = enum.auto()
+
+
 @dataclass
-class IndexGetResponse:
+class IndexGetResult:
     id: int
     document: str
+
+
+@dataclass
+class IndexGetResponse:
+    status_code: GetStatusCode
+    result: typing.Optional[IndexGetResult]
+
+    @staticmethod
+    def success(id: int, document: str) -> typing_extensions.Self:
+        return IndexGetResponse(status_code=GetStatusCode.SUCCESS, result=IndexGetResult(id=id, document=document))
+
+    @staticmethod
+    def failure() -> typing_extensions.Self:
+        return IndexGetResponse(status_code=GetStatusCode.FAILURE, result=None)
 
 
 @dataclass
@@ -125,6 +144,8 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         self._last_document_id = self.__get_last_document_id()
         self._indexing_count = 0
         self._indexed_documents = {}
+        self._deleting_count = 0
+        self._deleted_document_ids = set()
 
     def __len__(self):
         it = self._iter
@@ -135,7 +156,7 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         else:
             len = 0
 
-        return len + self._indexing_count
+        return len + self._indexing_count - self._deleting_count
 
     def get_document_id_from_hash(self, hash: str) -> typing.Optional[int]:
         d = KonlDictView(self._iter, self._hash_prefix)
@@ -150,6 +171,11 @@ class KonlIndexWriteBatch(KonlIndexWriter):
 
         d[hash] = document_id
         self._indexed_documents[hash] = document_id
+
+    def delete_document_hash(self, hash: str):
+        d = KonlDictWriteBatch(self._wb, self._cf_handle, self._hash_prefix)
+
+        del d[hash]
 
     def __get_last_document_id(self):
         it = self._iter
@@ -186,6 +212,48 @@ class KonlIndexWriteBatch(KonlIndexWriter):
             self.add_document_hash(self._last_document_id, document_hash)
 
         return IndexingResult.success(self._last_document_id)
+
+    def delete(self, document_id) -> None:
+        with self._locks.get(self._name):
+            if document_id in self._deleted_document_ids:
+                return
+
+            document_id_key = self.build_key_name(document_id)
+
+            get_response = self.get(document_id)
+
+            if get_response.status_code != GetStatusCode.SUCCESS:
+                return
+
+            document_hash = self.generate_hash(get_response.result.document)
+            self.delete_document_hash(document_hash)
+
+            token_name = self.build_token_name(document_id)
+
+            it = self._iter
+            it.seek(token_name)
+
+            if it.valid() and it.key() == token_name:
+                self._inverted_index_wb.delete(document_id, it.value())
+
+            self._wb.delete(token_name, self._cf_handle)
+
+            document_id_key = self.build_key_name(document_id)
+            self._wb.delete(document_id_key, self._cf_handle)
+
+            self._deleting_count += 1
+            self._deleted_document_ids.add(document_id)
+
+    def get(self, document_id: int) -> IndexGetResponse:
+        document_id_key = self.build_key_name(document_id)
+        it = self._iter
+        it.seek(document_id_key)
+
+        if it.valid() and it.key() == document_id_key:
+            return IndexGetResponse.success(document_id, it.value())
+        else:
+            return IndexGetResponse.failure()
+
 
     def commit(self):
         self._wb.put(_LAST_DOCUMENT_ID, self._last_document_id, self._cf_handle)
@@ -276,7 +344,7 @@ class KonlIndex(KonlIndexWriter):
 
             get_response = self.get(document_id)
 
-            document_hash = self.generate_hash(get_response.document)
+            document_hash = self.generate_hash(get_response.result.document)
             self.delete_document_hash(document_hash)
 
             token_name = self.build_token_name(document_id)
@@ -301,9 +369,11 @@ class KonlIndex(KonlIndexWriter):
 
     def get(self, document_id) -> IndexGetResponse:
         document_id_key = self.build_key_name(document_id)
-        return IndexGetResponse(
-            id=document_id, document=self._cf[document_id_key]
-        )
+
+        if document_id_key in self._cf:
+            return IndexGetResponse.success(document_id, self._cf[document_id_key])
+        else:
+            return IndexGetResponse.failure()
 
     def get_all(self) -> typing.List[IndexGetResponse]:
         it = self._cf.iter()
@@ -312,7 +382,7 @@ class KonlIndex(KonlIndexWriter):
         result = []
 
         while (it.valid() and type(it.key()) == str and it.key().startswith(self._prefix)):
-            r = IndexGetResponse(id=int(self.__remove_prefix(it.key())), document=it.value())
+            r = IndexGetResponse.success(int(self.__remove_prefix(it.key())), it.value())
             result.append(r)
             it.next()
 
@@ -333,7 +403,7 @@ class KonlIndex(KonlIndexWriter):
         result = []
 
         while (it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key):
-            r = IndexGetResponse(id=int(self.__remove_prefix(it.key())), document=it.value())
+            r = IndexGetResponse.success(int(self.__remove_prefix(it.key())), it.value())
             result.append(r)
             it.next()
 
@@ -345,8 +415,7 @@ class KonlIndex(KonlIndexWriter):
     ) -> typing.List[IndexGetResponse]:
         keys = [self.build_key_name(document_id) for document_id in document_ids]
 
-        return [IndexGetResponse(id=document_ids[i], document=document)
-                for i, document in enumerate(self._cf[keys]) if document]
+        return [IndexGetResponse.success(document_ids[i], document) for i, document in enumerate(self._cf[keys]) if document]
 
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.build_token_name(document_id)]
@@ -378,8 +447,8 @@ class KonlIndex(KonlIndexWriter):
 
         sanitized_tokens = self.__tokenize_with_order(" ".join(tokens))
 
-        tokens_with_ids = [(response.id,
-                            self.__tokenize_with_order(response.document))
+        tokens_with_ids = [(response.result.id,
+                            self.__tokenize_with_order(response.result.document))
                            for response in self.get_multi(result)]
 
         return [tokens_with_id[0] for tokens_with_id in tokens_with_ids

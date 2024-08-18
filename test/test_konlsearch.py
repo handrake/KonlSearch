@@ -239,12 +239,15 @@ def test_index_writebatch(index):
     r1 = index_wb.index("기동전사 건담")
     r2 = index_wb.index("기동전사 건담 SEED")
     r3 = index_wb.index("기동전사 건담 SEED DESTINY")
+    index_wb.delete(100)
+    index_wb.delete(100)
+    index_wb.delete(99)
 
     assert len(index) == 132
 
     index_wb.commit()
 
-    assert len(index) == 135
+    assert len(index) == 133
 
     tokens = index.get_tokens(10)
 
@@ -270,16 +273,16 @@ def test_index_len(index):
 def test_index_get(index):
     r = index.get(10)
 
-    assert r.id == 10 and r.document == '그 비스크 돌은 사랑을 한다'
+    assert r.result.id == 10 and r.result.document == '그 비스크 돌은 사랑을 한다'
 
 
 def test_index_get_all(index):
-    result = index.get_all()
+    response = index.get_all()
 
     index.delete(10)
     index.delete(12)
 
-    assert len(result) == 132 and len(index) == 130
+    assert len(response) == 132 and len(index) == 130
 
 
 def test_index_get_range(index):
@@ -287,7 +290,7 @@ def test_index_get_range(index):
 
     result = index.get_range(10, 20)
 
-    document_ids = [document.id for document in result]
+    document_ids = [document.result.id for document in result]
 
     assert document_ids == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
@@ -295,7 +298,7 @@ def test_index_get_range(index):
 def test_index_get_multi(index):
     result = index.get_multi([10, 15, 20, 1000])
 
-    document_ids = [document.id for document in result]
+    document_ids = [document.result.id for document in result]
 
     assert document_ids == [10, 15, 20]
 
@@ -303,13 +306,13 @@ def test_index_get_multi(index):
 def test_index_hash(index):
     r1 = index.get(100)
 
-    r2 = index.index(r1.document)
+    r2 = index.index(r1.result.document)
 
     assert r2.status_code == IndexingStatusCode.CONFLICT and r2.document_id == 100
 
     r3 = index.delete(100)
 
-    r4 = index.index(r1.document)
+    r4 = index.index(r1.result.document)
 
     assert r4.document_id == 133 and r4.status_code == IndexingStatusCode.SUCCESS
 
