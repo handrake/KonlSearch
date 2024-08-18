@@ -234,7 +234,12 @@ def test_search_mode_complex(index):
 
 
 def test_index_writebatch(index):
-    index.to_write_batch().index("기동전사 건담")
+    index_wb = index.to_write_batch()
+    index_wb.index("기동전사 건담")
+
+    assert len(index) == 132
+
+    index_wb.commit()
 
     assert len(index) == 133
 
@@ -248,7 +253,7 @@ def test_index_writebatch(index):
 
     index._inverted_index.to_write_batch(wb).delete(10, tokens)
 
-    index._cf.write(wb)
+    index.commit(wb)
 
     document_ids = index._inverted_index.search(tokens, TokenSearchMode.AND)
 
@@ -359,7 +364,7 @@ def test_set_writebatch(index):
     s_wb.add("2")
     s_wb.add("3")
 
-    index._cf.write(wb1)
+    index.commit(wb1)
 
     s = KonlSet(index._cf, "test")
 
@@ -372,7 +377,7 @@ def test_set_writebatch(index):
 
     s_wb.remove("1")
 
-    index._cf.write(wb2)
+    index.commit(wb2)
 
     s = KonlSet(index._cf, "test")
 
@@ -416,7 +421,7 @@ def test_dict_writebatch(index):
     d_wb["b"] = "2"
     d_wb["c"] = "3"
 
-    index._cf.write(wb1)
+    index.commit(wb1)
 
     d = KonlDict(index._cf, "test")
 
@@ -429,7 +434,7 @@ def test_dict_writebatch(index):
 
     del d_wb["a"]
 
-    index._cf.write(wb2)
+    index.commit(wb2)
 
     d = KonlDict(index._cf, "test")
 

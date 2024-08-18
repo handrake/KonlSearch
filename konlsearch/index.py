@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 from dataclasses import dataclass
 import enum
@@ -109,19 +111,16 @@ class KonlIndexWriter(abc.ABC):
 
 
 class KonlIndexWriteBatch(KonlIndexWriter):
-    def __init__(self, cf: rocksdict.Rdict,
-                 wb: rocksdict.WriteBatch,
-                 inverted_index: KonlInvertedIndex,
-                 name: str, locks: StripedLock):
-        self._cf = cf
+    def __init__(self, index: KonlIndex, wb: rocksdict.WriteBatch):
+        self._cf = index._cf
         self._iter = self._cf.iter()
         self._wb = wb
-        self._name = name
-        self._inverted_index = inverted_index
-        self._locks = locks
-        self._prefix = f'{name}:document'
-        self._len_prefix = f'{name}:__len__:document'
-        self._hash_prefix = f'{name}:hash'
+        self._name = index._name
+        self._inverted_index = index._inverted_index
+        self._locks = index._locks
+        self._prefix = f'{index._name}:document'
+        self._len_prefix = f'{index._name}:__len__:document'
+        self._hash_prefix = f'{index._name}:hash'
 
     def get_document_id_from_hash(self, hash: str) -> typing.Optional[int]:
         d = KonlDictView(self._iter, self._hash_prefix)
@@ -175,10 +174,10 @@ class KonlIndexWriteBatch(KonlIndexWriter):
 
             self.add_document_hash(last_document_id, document_hash)
 
-            self._cf.write(self._wb)
-
         return IndexingResult.success(last_document_id)
 
+    def commit(self):
+        self._cf.write(self._wb)
 
 class KonlIndex(KonlIndexWriter):
     def __init__(self, db: rocksdict.Rdict, name: str):
@@ -243,9 +242,7 @@ class KonlIndex(KonlIndexWriter):
         wb = rocksdict.WriteBatch()
         cf_handle = self._cf.get_column_family_handle(self._name)
         wb.set_default_column_family(cf_handle)
-        return KonlIndexWriteBatch(
-            self._cf, wb, self._inverted_index, self._name, self._locks
-        )
+        return KonlIndexWriteBatch(self, wb)
 
     def delete(self, document_id) -> None:
         with self._locks.get(self._name):
@@ -272,6 +269,9 @@ class KonlIndex(KonlIndexWriter):
             size = self.__len__()
             if size > 0:
                 self.__set_len(size-1)
+
+    def commit(self, wb: rocksdict.WriteBatch):
+        self._cf.write(wb)
 
     def get(self, document_id) -> IndexGetResponse:
         document_id_key = self.build_key_name(document_id)
