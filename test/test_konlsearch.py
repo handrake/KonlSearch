@@ -384,6 +384,19 @@ def test_set_writebatch(index):
     assert list(s.items()) == ["2", "3"]
     assert len(s) == 2
 
+    wb3 = rocksdict.WriteBatch()
+    wb3.set_default_column_family(column_family=cf_handle)
+    s_wb = KonlSetWriteBatch(wb3, "test")
+
+    s_wb.remove("2")
+
+    index.rollback(wb3)
+
+    s = KonlSet(index._cf, "test")
+
+    assert list(s.items()) == ["2", "3"]
+    assert len(s) == 2
+
 
 def test_dict(index):
     d = KonlDict(index._cf, "test")

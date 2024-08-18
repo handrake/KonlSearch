@@ -179,6 +179,9 @@ class KonlIndexWriteBatch(KonlIndexWriter):
     def commit(self):
         self._cf.write(self._wb)
 
+    def rollback(self):
+        self._wb.clear()
+
 class KonlIndex(KonlIndexWriter):
     def __init__(self, db: rocksdict.Rdict, name: str):
         self._db = db
@@ -272,6 +275,9 @@ class KonlIndex(KonlIndexWriter):
 
     def commit(self, wb: rocksdict.WriteBatch):
         self._cf.write(wb)
+
+    def rollback(self, wb: rocksdict.WriteBatch):
+        wb.clear()
 
     def get(self, document_id) -> IndexGetResponse:
         document_id_key = self.build_key_name(document_id)
