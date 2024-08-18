@@ -116,24 +116,52 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         self._iter = self._cf.iter()
         self._wb = wb
         self._name = index._name
+        self._cf_handle = self._cf.get_column_family_handle(self._name)
         self._inverted_index = index._inverted_index
         self._locks = index._locks
-        self._prefix = f'{index._name}:document'
-        self._len_prefix = f'{index._name}:__len__:document'
-        self._hash_prefix = f'{index._name}:hash'
+        self._prefix = index._prefix
+        self._len_prefix = index._len_prefix
+        self._hash_prefix = index._hash_prefix
+        self._last_document_id = self.__get_last_document_id()
+        self._indexing_count = 0
+        self._indexed_documents = {}
+
+    def __len__(self):
+        it = self._iter
+        it.seek(self._len_prefix)
+
+        if it.valid() and it.key() == self._len_prefix:
+            len = it.value()
+        else:
+            len = 0
+
+        return len + self._indexing_count
 
     def get_document_id_from_hash(self, hash: str) -> typing.Optional[int]:
         d = KonlDictView(self._iter, self._hash_prefix)
 
         try:
-            return d[hash]
+            return self._indexed_documents[hash] or d[hash]
         except KeyError:
             return None
 
     def add_document_hash(self, document_id: int, hash: str):
-        d = KonlDictWriteBatch(self._wb, self._hash_prefix)
+        d = KonlDictWriteBatch(self._wb, self._cf_handle, self._hash_prefix)
 
         d[hash] = document_id
+        self._indexed_documents[hash] = document_id
+
+    def __get_last_document_id(self):
+        it = self._iter
+
+        last_document_id = 1
+
+        it.seek(_LAST_DOCUMENT_ID)
+
+        if it.valid() and it.key() == _LAST_DOCUMENT_ID:
+            last_document_id = it.value()
+
+        return last_document_id
 
     def index(self, document) -> IndexingResult:
         with (self._locks.get(self._name)):
@@ -143,44 +171,39 @@ class KonlIndexWriteBatch(KonlIndexWriter):
             if conflicting_document_id:
                 return IndexingResult.conflict(conflicting_document_id)
 
-            it = self._iter
-
             tokens = self.tokenize(document)
 
-            last_document_id = 1
+            self._last_document_id += 1
 
-            it.seek(_LAST_DOCUMENT_ID)
+            key = self.build_key_name(self._last_document_id)
 
-            if it.valid() and it.key() == _LAST_DOCUMENT_ID:
-                last_document_id = it.value() + 1
-
-            self._wb[_LAST_DOCUMENT_ID] = last_document_id
-
-            key = self.build_key_name(last_document_id)
-
-            self._wb[key] = document
-            self._wb[self.build_token_name(last_document_id)] = tokens
-
-            it.seek(self._len_prefix)
-
-            if it.valid() and it.key() == self._len_prefix:
-                size = it.value()
-                self._wb[self._len_prefix] = size + 1
-            else:
-                self._wb[self._len_prefix] = last_document_id
+            self._wb.put(key, document, self._cf_handle)
+            self._wb.put(self.build_token_name(self._last_document_id), tokens, self._cf_handle)
 
             inverted_index_wb = self._inverted_index.to_write_batch(self._wb)
-            inverted_index_wb.index(last_document_id, tokens)
+            inverted_index_wb.index(self._last_document_id, tokens)
 
-            self.add_document_hash(last_document_id, document_hash)
+            self._indexing_count += 1
+            self.add_document_hash(self._last_document_id, document_hash)
 
-        return IndexingResult.success(last_document_id)
+        return IndexingResult.success(self._last_document_id)
 
     def commit(self):
+        self._wb.put(_LAST_DOCUMENT_ID, self._last_document_id, self._cf_handle)
+        self._wb.put(self._len_prefix, len(self), self._cf_handle)
+
         self._cf.write(self._wb)
+
+        self.clear()
 
     def rollback(self):
         self._wb.clear()
+        self.clear()
+
+    def clear(self):
+        self._indexed_documents = {}
+        self._indexing_count = 0
+
 
 class KonlIndex(KonlIndexWriter):
     def __init__(self, db: rocksdict.Rdict, name: str):
@@ -243,8 +266,6 @@ class KonlIndex(KonlIndexWriter):
 
     def to_write_batch(self):
         wb = rocksdict.WriteBatch()
-        cf_handle = self._cf.get_column_family_handle(self._name)
-        wb.set_default_column_family(cf_handle)
         return KonlIndexWriteBatch(self, wb)
 
     def delete(self, document_id) -> None:
@@ -331,9 +352,7 @@ class KonlIndex(KonlIndexWriter):
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.build_token_name(document_id)]
 
-    def search_complex(
-            self, request: ComplexSearchGetRequest
-    ) -> typing.List[int]:
+    def search_complex(self, request: ComplexSearchGetRequest) -> typing.List[int]:
         if isinstance(request.condition1, ComplexSearchGetRequest):
             result1 = self.search_complex(request.condition1)
         else:

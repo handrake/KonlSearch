@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import rocksdict
 import typing
 
@@ -22,9 +24,7 @@ def decompose_word(word: str) -> str:
 class KonlTrieView:
     def __init__(self, iter: rocksdict.RdictIter):
         self._iter = iter
-        self._token_reverse_dict = KonlDictView(
-            self._iter, _TOKEN_REVERSE_DICT
-        )
+        self._token_reverse_dict = KonlDictView(self._iter, _TOKEN_REVERSE_DICT)
 
     def search(self, prefix: str) -> typing.List[str]:
         decomposed_prefix = decompose_word(prefix)
@@ -59,18 +59,17 @@ class KonlTrieView:
 
 
 class KonlTrieWriteBatch:
-    def __init__(self, cf: rocksdict.Rdict, wb: rocksdict.WriteBatch):
-        self._cf = cf
+    def __init__(self, trie: KonlTrie, wb: rocksdict.WriteBatch):
+        self._cf = trie._cf
+        self._cf_handle = self._cf.get_column_family_handle(trie._name)
         self._wb = wb
 
         iter = self._cf.iter()
 
         self._token_dict_view = KonlDictView(iter, _TOKEN_DICT)
         self._token_reverse_dict_view = KonlDictView(iter, _TOKEN_REVERSE_DICT)
-        self._token_dict_wb = KonlDictWriteBatch(wb, _TOKEN_DICT)
-        self._token_reverse_dict_wb = KonlDictWriteBatch(
-            wb, _TOKEN_REVERSE_DICT
-        )
+        self._token_dict_wb = KonlDictWriteBatch(wb, self._cf_handle, _TOKEN_DICT)
+        self._token_reverse_dict_wb = KonlDictWriteBatch(wb, self._cf_handle, _TOKEN_REVERSE_DICT)
 
     def insert(self, token) -> None:
         decomposed_token = decompose_word(token)
@@ -80,7 +79,7 @@ class KonlTrieWriteBatch:
 
             if len(s) >= 2:
                 s1 = s[:-1]
-                set_s1_wb = KonlSetWriteBatch(self._wb, s1)
+                set_s1_wb = KonlSetWriteBatch(self._wb, self._cf_handle, s1)
                 set_s1_wb.add(s)
 
         self._token_dict_wb[token] = decomposed_token
@@ -104,7 +103,7 @@ class KonlTrieWriteBatch:
 
             if len(s) >= 2:
                 s1 = s[:-1]
-                set_s1_wb = KonlSetWriteBatch(self._wb, s1)
+                set_s1_wb = KonlSetWriteBatch(self._wb, self._cf_handle, s1)
                 set_s1_wb.remove(s)
 
         del self._token_dict_wb[token]
@@ -125,9 +124,7 @@ class KonlTrie:
         return KonlTrieView(self._cf.iter())
 
     def to_write_batch(self, wb: rocksdict.WriteBatch) -> KonlTrieWriteBatch:
-        cf_handle = self._cf.get_column_family_handle(self._name)
-        wb.set_default_column_family(cf_handle)
-        return KonlTrieWriteBatch(self._cf, wb)
+        return KonlTrieWriteBatch(self, wb)
 
     def insert(self, token) -> None:
         if token in self._token_dict:

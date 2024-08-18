@@ -97,19 +97,20 @@ class KonlSet(KonlSetReader, KonlSetWriter):
 
 
 class KonlSetWriteBatch(KonlSetWriter):
-    def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
+    def __init__(self, wb: rocksdict.WriteBatch, cf_handle: rocksdict.ColumnFamily, prefix: str):
         self._wb = wb
+        self._cf_handle = cf_handle
         self._prefix = f'{prefix}:set'
 
     def add(self, k: str):
         key = self.build_key_name(k)
 
-        self._wb[key] = "1"
+        self._wb.put(key, "1", self._cf_handle)
 
     def remove(self, k: str):
         key = self.build_key_name(k)
 
-        del self._wb[key]
+        self._wb.delete(key, self._cf_handle)
 
     def update(self, s: typing.Set[str]):
         for k in s:

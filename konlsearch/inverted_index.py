@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import rocksdict
 import typing
 import enum
@@ -17,14 +19,15 @@ class TokenSearchMode(StrEnum):
 
 
 class KonlInvertedIndexWriteBatch:
-    def __init__(self, cf: rocksdict.Rdict, trie: KonlTrie, wb: rocksdict.WriteBatch):
-        self._iter = cf.iter()
+    def __init__(self, inverted_index: KonlInvertedIndex, wb: rocksdict.WriteBatch):
+        self._iter = inverted_index._cf.iter()
         self._wb = wb
-        self._trie = trie
+        self._cf_handle = inverted_index._cf.get_column_family_handle(inverted_index._name)
+        self._trie = inverted_index._trie
 
     def index(self, document_id: int, tokens: typing.Set[str]):
         for token in tokens:
-            s_wb = KonlSetWriteBatch(self._wb, token)
+            s_wb = KonlSetWriteBatch(self._wb, self._cf_handle, token)
             s_wb.add(str(document_id))
 
         trie_wb = self._trie.to_write_batch(self._wb)
@@ -35,7 +38,7 @@ class KonlInvertedIndexWriteBatch:
     def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
         for token in tokens:
             s = KonlSetView(self._iter, token)
-            s_wb = KonlSetWriteBatch(self._wb, token)
+            s_wb = KonlSetWriteBatch(self._wb, self._cf_handle, token)
             s_wb.remove(str(document_id))
 
             if document_id in s and len(s) == 1:
@@ -64,17 +67,14 @@ class KonlInvertedIndex:
         self._trie.close()
 
     def to_write_batch(self, wb: rocksdict.WriteBatch):
-        cf_handle = self._cf.get_column_family_handle(self._name)
-        wb.set_default_column_family(cf_handle)
-        return KonlInvertedIndexWriteBatch(self._cf, self._trie, wb)
+        return KonlInvertedIndexWriteBatch(self, wb)
 
     def index(self, document_id: int, tokens: typing.Set[str]):
         wb = rocksdict.WriteBatch()
         cf_handle = self._db.get_column_family_handle(self._name)
-        wb.set_default_column_family(cf_handle)
 
         for token in tokens:
-            s_wb = KonlSetWriteBatch(wb, token)
+            s_wb = KonlSetWriteBatch(wb, cf_handle, token)
             s_wb.add(str(document_id))
 
             self._trie.insert(token)

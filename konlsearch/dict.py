@@ -112,19 +112,20 @@ class KonlDict(KonlDictReader, KonlDictWriter):
 
 
 class KonlDictWriteBatch(KonlDictWriter):
-    def __init__(self, wb: rocksdict.WriteBatch, prefix: str):
+    def __init__(self, wb: rocksdict.WriteBatch, cf_handle: rocksdict.ColumnFamily, prefix: str):
         self._wb = wb
+        self._cf_handle = cf_handle
         self._prefix = f'{prefix}:dict'
 
     def __setitem__(self, k: str, v: str) -> None:
         key = self.build_key_name(k)
 
-        self._wb[key] = v
+        self._wb.put(key, v, self._cf_handle)
 
     def __delitem__(self, k: str):
         key = self.build_key_name(k)
 
-        del self._wb[key]
+        self._wb.delete(key, self._cf_handle)
 
     def update(self, d: typing.Dict):
         for k, v in d.items():

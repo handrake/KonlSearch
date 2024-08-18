@@ -235,13 +235,16 @@ def test_search_mode_complex(index):
 
 def test_index_writebatch(index):
     index_wb = index.to_write_batch()
-    index_wb.index("기동전사 건담")
+
+    r1 = index_wb.index("기동전사 건담")
+    r2 = index_wb.index("기동전사 건담 SEED")
+    r3 = index_wb.index("기동전사 건담 SEED DESTINY")
 
     assert len(index) == 132
 
     index_wb.commit()
 
-    assert len(index) == 133
+    assert len(index) == 135
 
     tokens = index.get_tokens(10)
 
@@ -357,8 +360,7 @@ def test_set(index):
 def test_set_writebatch(index):
     wb1 = rocksdict.WriteBatch()
     cf_handle = index._db.get_column_family_handle(index._name)
-    wb1.set_default_column_family(column_family=cf_handle)
-    s_wb = KonlSetWriteBatch(wb1, "test")
+    s_wb = KonlSetWriteBatch(wb1, cf_handle, "test")
 
     s_wb.add("1")
     s_wb.add("2")
@@ -372,8 +374,7 @@ def test_set_writebatch(index):
     assert len(s) == 3
 
     wb2 = rocksdict.WriteBatch()
-    wb2.set_default_column_family(column_family=cf_handle)
-    s_wb = KonlSetWriteBatch(wb2, "test")
+    s_wb = KonlSetWriteBatch(wb2, cf_handle, "test")
 
     s_wb.remove("1")
 
@@ -385,8 +386,7 @@ def test_set_writebatch(index):
     assert len(s) == 2
 
     wb3 = rocksdict.WriteBatch()
-    wb3.set_default_column_family(column_family=cf_handle)
-    s_wb = KonlSetWriteBatch(wb3, "test")
+    s_wb = KonlSetWriteBatch(wb3, cf_handle, "test")
 
     s_wb.remove("2")
 
@@ -427,8 +427,7 @@ def test_dict(index):
 def test_dict_writebatch(index):
     wb1 = rocksdict.WriteBatch()
     cf_handle = index._db.get_column_family_handle(index._name)
-    wb1.set_default_column_family(column_family=cf_handle)
-    d_wb = KonlDictWriteBatch(wb1, "test")
+    d_wb = KonlDictWriteBatch(wb1, cf_handle, "test")
 
     d_wb["a"] = "1"
     d_wb["b"] = "2"
@@ -442,8 +441,7 @@ def test_dict_writebatch(index):
     assert len(d) == 3
 
     wb2 = rocksdict.WriteBatch()
-    wb2.set_default_column_family(column_family=cf_handle)
-    d_wb = KonlDictWriteBatch(wb2, "test")
+    d_wb = KonlDictWriteBatch(wb2, cf_handle, "test")
 
     del d_wb["a"]
 
