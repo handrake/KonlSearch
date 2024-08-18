@@ -52,11 +52,8 @@ class KonlSearchLog:
 
         result = []
 
-        while (it.valid() and type(it.key()) == str and
-               it.key().startswith(self._prefix) and it.key() < end_key):
-            r = SearchLogDto(
-                token=self.__get_token_from_key(it.key()), size=it.value()
-            )
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key:
+            r = SearchLogDto(token=self.__get_token_from_key(it.key()), size=it.value())
             result.append(r)
             it.next()
 

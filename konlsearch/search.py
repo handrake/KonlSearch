@@ -27,8 +27,7 @@ class KonlSearch:
 
         result = []
 
-        while (it.valid() and type(it.key()) == str and
-               it.key().startswith(self._index_prefix)):
+        while (it.valid() and type(it.key()) == str and it.key().startswith(self._index_prefix)):
             result.append(self.__remove_prefix(it.key()))
             it.next()
 

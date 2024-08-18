@@ -205,11 +205,8 @@ class KonlIndex(KonlIndexWriter):
 
         result = []
 
-        while (it.valid() and type(it.key()) == str and
-               it.key().startswith(self._prefix)):
-            r = IndexGetResponse(
-                id=int(self.__remove_prefix(it.key())), document=it.value()
-            )
+        while (it.valid() and type(it.key()) == str and it.key().startswith(self._prefix)):
+            r = IndexGetResponse(id=int(self.__remove_prefix(it.key())), document=it.value())
             result.append(r)
             it.next()
 
@@ -229,11 +226,8 @@ class KonlIndex(KonlIndexWriter):
 
         result = []
 
-        while (it.valid() and type(it.key()) == str and
-               it.key().startswith(self._prefix) and it.key() < end_key):
-            r = IndexGetResponse(
-                id=int(self.__remove_prefix(it.key())), document=it.value()
-            )
+        while (it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key):
+            r = IndexGetResponse(id=int(self.__remove_prefix(it.key())), document=it.value())
             result.append(r)
             it.next()
 
@@ -243,12 +237,10 @@ class KonlIndex(KonlIndexWriter):
             self,
             document_ids: typing.List[int]
     ) -> typing.List[IndexGetResponse]:
-        keys = [self.build_key_name(document_id)
-                for document_id in document_ids]
+        keys = [self.build_key_name(document_id) for document_id in document_ids]
 
-        return [IndexGetResponse(
-            id=document_ids[i], document=document
-        ) for i, document in enumerate(self._cf[keys]) if document]
+        return [IndexGetResponse(id=document_ids[i], document=document)
+                for i, document in enumerate(self._cf[keys]) if document]
 
     def get_tokens(self, document_id) -> typing.Set[str]:
         return self._cf[self.build_token_name(document_id)]
@@ -259,16 +251,12 @@ class KonlIndex(KonlIndexWriter):
         if isinstance(request.condition1, ComplexSearchGetRequest):
             result1 = self.search_complex(request.condition1)
         else:
-            result1 = self.search(
-                request.condition1.tokens, request.condition1.mode
-            )
+            result1 = self.search(request.condition1.tokens, request.condition1.mode)
 
         if isinstance(request.condition2, ComplexSearchGetRequest):
             result2 = self.search_complex(request.condition2)
         else:
-            result2 = self.search(
-                request.condition2.tokens, request.condition2.mode
-            )
+            result2 = self.search(request.condition2.tokens, request.condition2.mode)
 
         if request.mode == SearchMode.AND:
             return sorted(set(result1).intersection(set(result2)))
@@ -278,11 +266,7 @@ class KonlIndex(KonlIndexWriter):
             return []
 
     # noinspection PyBroadException
-    def search(
-            self,
-            tokens: typing.List[str],
-            mode: TokenSearchMode
-    ) -> typing.List[int]:
+    def search(self,tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
         if mode != TokenSearchMode.PHRASE:
             return self._inverted_index.search(tokens, mode)
 
@@ -294,15 +278,12 @@ class KonlIndex(KonlIndexWriter):
                             self.__tokenize_with_order(response.document))
                            for response in self.get_multi(result)]
 
-        return [tokens_with_id[0]
-                for tokens_with_id in tokens_with_ids
-                if utility.is_sorted([tokens_with_id[1].index(token)
-                                      for token in sanitized_tokens])]
+        return [tokens_with_id[0] for tokens_with_id in tokens_with_ids
+                if utility.is_sorted([tokens_with_id[1].index(token) for token in sanitized_tokens])]
 
     def __tokenize_with_order(self, document) -> typing.List[str]:
         sanitized_document = self.sanitize(document)
-        return [token for token in list(mecab.morphs(sanitized_document))
-                if self.is_indexable(token)]
+        return [token for token in list(mecab.morphs(sanitized_document)) if self.is_indexable(token)]
 
     def search_suggestions(self, prefix: str) -> typing.List[str]:
         return self._inverted_index.search_suggestions(prefix)
