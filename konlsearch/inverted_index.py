@@ -23,17 +23,15 @@ class KonlInvertedIndexWriteBatch:
         self._iter = inverted_index._cf.iter()
         self._wb = wb
         self._cf_handle = inverted_index._cf.get_column_family_handle(inverted_index._name)
-        self._trie = inverted_index._trie
+        self._trie_wb = inverted_index._trie.to_write_batch(wb)
 
     def index(self, document_id: int, tokens: typing.Set[str]):
         for token in tokens:
             s_wb = KonlSetWriteBatch(self._wb, self._cf_handle, token)
             s_wb.add(str(document_id))
 
-        trie_wb = self._trie.to_write_batch(self._wb)
-
         for token in tokens:
-            trie_wb.insert(token)
+            self._trie_wb.insert(token)
 
     def delete(self, document_id: int, tokens: typing.Set[str]) -> None:
         for token in tokens:
@@ -42,7 +40,7 @@ class KonlInvertedIndexWriteBatch:
             s_wb.remove(str(document_id))
 
             if document_id in s and len(s) == 1:
-                self._trie.to_write_batch(self._wb).delete(token)
+                self._trie_wb.delete(token)
 
 
 class KonlInvertedIndex:

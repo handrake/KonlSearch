@@ -117,7 +117,7 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         self._wb = wb
         self._name = index._name
         self._cf_handle = self._cf.get_column_family_handle(self._name)
-        self._inverted_index = index._inverted_index
+        self._inverted_index_wb = index._inverted_index.to_write_batch(wb)
         self._locks = index._locks
         self._prefix = index._prefix
         self._len_prefix = index._len_prefix
@@ -180,8 +180,7 @@ class KonlIndexWriteBatch(KonlIndexWriter):
             self._wb.put(key, document, self._cf_handle)
             self._wb.put(self.build_token_name(self._last_document_id), tokens, self._cf_handle)
 
-            inverted_index_wb = self._inverted_index.to_write_batch(self._wb)
-            inverted_index_wb.index(self._last_document_id, tokens)
+            self._inverted_index_wb.index(self._last_document_id, tokens)
 
             self._indexing_count += 1
             self.add_document_hash(self._last_document_id, document_hash)
