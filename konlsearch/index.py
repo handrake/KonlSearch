@@ -257,7 +257,6 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         else:
             return IndexGetResponse.failure()
 
-
     def commit(self):
         self._wb.put(_LAST_DOCUMENT_ID, self._last_document_id, self._cf_handle)
         self._wb.put(self._len_prefix, len(self), self._cf_handle)
@@ -384,15 +383,14 @@ class KonlIndex(KonlIndexWriter):
 
         result = []
 
-        while (it.valid() and type(it.key()) == str and it.key().startswith(self._prefix)):
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
             r = IndexGetResponse.success(int(self.__remove_prefix(it.key())), it.value())
             result.append(r)
             it.next()
 
         return result
 
-    def get_range(self, start_id: int,
-                  end_id: int) -> typing.List[IndexGetResponse]:
+    def get_range(self, start_id: int, end_id: int) -> typing.List[IndexGetResponse]:
         if end_id <= start_id:
             return []
 
@@ -405,7 +403,7 @@ class KonlIndex(KonlIndexWriter):
 
         result = []
 
-        while (it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key):
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key:
             r = IndexGetResponse.success(int(self.__remove_prefix(it.key())), it.value())
             result.append(r)
             it.next()
@@ -447,8 +445,7 @@ class KonlIndex(KonlIndexWriter):
 
         sanitized_tokens = self.__tokenize_with_order(" ".join(tokens))
 
-        tokens_with_ids = [(response.result.id,
-                            self.__tokenize_with_order(response.result.document))
+        tokens_with_ids = [(response.result.id, self.__tokenize_with_order(response.result.document))
                            for response in self.get_multi(result)]
 
         return [tokens_with_id[0] for tokens_with_id in tokens_with_ids
