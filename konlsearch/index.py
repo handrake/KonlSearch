@@ -245,6 +245,9 @@ class KonlIndexWriteBatch(KonlIndexWriter):
             self._deleted_document_ids.add(document_id)
 
     def get(self, document_id: int) -> IndexGetResponse:
+        if document_id in self._deleted_document_ids:
+            return IndexGetResponse.failure()
+
         document_id_key = self.build_key_name(document_id)
         it = self._iter
         it.seek(document_id_key)
@@ -409,10 +412,7 @@ class KonlIndex(KonlIndexWriter):
 
         return result
 
-    def get_multi(
-            self,
-            document_ids: typing.List[int]
-    ) -> typing.List[IndexGetResponse]:
+    def get_multi(self, document_ids: typing.List[int]) -> typing.List[IndexGetResponse]:
         keys = [self.build_key_name(document_id) for document_id in document_ids]
 
         return [IndexGetResponse.success(document_ids[i], document) for i, document in enumerate(self._cf[keys]) if document]

@@ -5,7 +5,8 @@ from konlsearch.index import (TokenSearchMode,
                               SearchGetRequest,
                               ComplexSearchGetRequest,
                               SearchMode,
-                              IndexingStatusCode)
+                              IndexingStatusCode,
+                              GetStatusCode)
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogDto
@@ -242,8 +243,9 @@ def test_index_writebatch(index):
     index_wb.delete(100)
     index_wb.delete(100)
     index_wb.delete(99)
+    r4 = index_wb.get(100)
 
-    assert len(index) == 132
+    assert len(index) == 132 and r4.status_code == GetStatusCode.FAILURE
 
     index_wb.commit()
 
