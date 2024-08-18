@@ -11,9 +11,13 @@ import rocksdict
 
 from strenum import StrEnum
 
+import xxhash
+
 from . import utility
 from .inverted_index import KonlInvertedIndex, TokenSearchMode
 from .lock import StripedLock
+from .dict import KonlDict, KonlDictView, KonlDictWriteBatch
+
 
 mecab = mecab.MeCab()
 
@@ -25,6 +29,11 @@ _LAST_DOCUMENT_ID = "last_document_id"
 class SearchMode(StrEnum):
     AND = enum.auto()
     OR = enum.auto()
+
+
+class IndexingStatusCode(StrEnum):
+    SUCCESS = enum.auto()
+    CONFLICT = enum.auto()
 
 
 @dataclass
@@ -46,6 +55,20 @@ class ComplexSearchGetRequest:
     mode: SearchMode
 
 
+@dataclass
+class IndexingResult:
+    status_code: IndexingStatusCode
+    document_id: typing.Optional[int]
+
+    @staticmethod
+    def success(document_id: int) -> typing_extensions.Self:
+        return IndexingResult(status_code=IndexingStatusCode.SUCCESS, document_id=document_id)
+
+    @staticmethod
+    def conflict(document_id: int) -> typing_extensions.Self:
+        return IndexingResult(status_code=IndexingStatusCode.CONFLICT, document_id=document_id)
+
+
 class KonlIndexWriter(abc.ABC):
     def build_key_name(self, document_id) -> str:
         document_id_s = f'{document_id:x}'.rjust(10, '0')
@@ -58,6 +81,9 @@ class KonlIndexWriter(abc.ABC):
                 set(mecab.morphs(sanitized_document))
                 .union(set(sanitized_document.split()))
                 if self.is_indexable(token)}
+
+    def generate_hash(self, document) -> str:
+        return xxhash.xxh128(document).hexdigest()
 
     @staticmethod
     def build_token_name(document_id) -> str:
@@ -95,9 +121,29 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         self._locks = locks
         self._prefix = f'{name}:document'
         self._len_prefix = f'{name}:__len__:document'
+        self._hash_prefix = f'{name}:hash'
 
-    def index(self, document):
+    def get_document_id_from_hash(self, hash: str) -> typing.Optional[int]:
+        d = KonlDictView(self._iter, self._hash_prefix)
+
+        try:
+            return d[hash]
+        except KeyError:
+            return None
+
+    def add_document_hash(self, document_id: int, hash: str):
+        d = KonlDictWriteBatch(self._wb, self._hash_prefix)
+
+        d[hash] = document_id
+
+    def index(self, document) -> IndexingResult:
         with (self._locks.get(self._name)):
+            document_hash = self.generate_hash(document)
+            conflicting_document_id = self.get_document_id_from_hash(document_hash)
+
+            if conflicting_document_id:
+                return IndexingResult.conflict(conflicting_document_id)
+
             it = self._iter
 
             tokens = self.tokenize(document)
@@ -127,9 +173,11 @@ class KonlIndexWriteBatch(KonlIndexWriter):
             inverted_index_wb = self._inverted_index.to_write_batch(self._wb)
             inverted_index_wb.index(last_document_id, tokens)
 
+            self.add_document_hash(last_document_id, document_hash)
+
             self._cf.write(self._wb)
 
-        return last_document_id
+        return IndexingResult.success(last_document_id)
 
 
 class KonlIndex(KonlIndexWriter):
@@ -141,9 +189,34 @@ class KonlIndex(KonlIndexWriter):
         self._locks = StripedLock(threading.Lock, 10)
         self._prefix = f'{name}:document'
         self._len_prefix = f'{name}:__len__:document'
+        self._hash_prefix = f'{name}:hash'
 
-    def index(self, document) -> int:
+    def get_document_id_from_hash(self, hash: str) -> typing.Optional[int]:
+        d = KonlDict(self._cf, self._hash_prefix)
+
+        try:
+            return d[hash]
+        except KeyError:
+            return None
+
+    def add_document_hash(self, document_id: int, hash: str):
+        d = KonlDict(self._cf, self._hash_prefix)
+
+        d[hash] = document_id
+
+    def delete_document_hash(self, hash: str):
+        d = KonlDict(self._cf, self._hash_prefix)
+
+        del d[hash]
+
+    def index(self, document) -> IndexingResult:
         with self._locks.get(self._name):
+            document_hash = self.generate_hash(document)
+            conflicting_document_id = self.get_document_id_from_hash(document_hash)
+
+            if conflicting_document_id:
+                return IndexingResult.conflict(conflicting_document_id)
+
             tokens = self.tokenize(document)
 
             last_document_id = 1
@@ -162,7 +235,9 @@ class KonlIndex(KonlIndexWriter):
 
             self._inverted_index.index(last_document_id, tokens)
 
-        return last_document_id
+            self.add_document_hash(last_document_id, document_hash)
+
+        return IndexingResult.success(last_document_id)
 
     def to_write_batch(self):
         wb = rocksdict.WriteBatch()
@@ -178,6 +253,11 @@ class KonlIndex(KonlIndexWriter):
 
             if document_id_key not in self._cf:
                 raise KeyError
+
+            get_response = self.get(document_id)
+
+            document_hash = self.generate_hash(get_response.document)
+            self.delete_document_hash(document_hash)
 
             token_name = self.build_token_name(document_id)
             tokens = self._cf[token_name]
@@ -266,7 +346,7 @@ class KonlIndex(KonlIndexWriter):
             return []
 
     # noinspection PyBroadException
-    def search(self,tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
+    def search(self, tokens: typing.List[str], mode: TokenSearchMode) -> typing.List[int]:
         if mode != TokenSearchMode.PHRASE:
             return self._inverted_index.search(tokens, mode)
 

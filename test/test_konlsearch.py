@@ -4,7 +4,8 @@ from konlsearch.search import KonlSearch
 from konlsearch.index import (TokenSearchMode,
                               SearchGetRequest,
                               ComplexSearchGetRequest,
-                              SearchMode)
+                              SearchMode,
+                              IndexingStatusCode)
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogDto
@@ -289,6 +290,20 @@ def test_index_get_multi(index):
     document_ids = [document.id for document in result]
 
     assert document_ids == [10, 15, 20]
+
+
+def test_index_hash(index):
+    r1 = index.get(100)
+
+    r2 = index.index(r1.document)
+
+    assert r2.status_code == IndexingStatusCode.CONFLICT and r2.document_id == 100
+
+    r3 = index.delete(100)
+
+    r4 = index.index(r1.document)
+
+    assert r4.document_id == 133 and r4.status_code == IndexingStatusCode.SUCCESS
 
 
 def test_inverted_index_delete(index):

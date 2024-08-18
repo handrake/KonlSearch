@@ -1,5 +1,5 @@
 from konlsearch.search import KonlSearch
-from konlsearch.index import TokenSearchMode
+from konlsearch.index import TokenSearchMode, IndexingStatusCode
 
 import pytest
 
@@ -28,7 +28,9 @@ def index(konl_search):
             break
 
         title = line.replace("_", " ").replace("\n", "")
-        index.index(title)
+        r = index.index(title)
+
+        assert r.status_code == IndexingStatusCode.SUCCESS
 
     yield index
 
