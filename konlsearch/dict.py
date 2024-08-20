@@ -133,3 +133,18 @@ class KonlDictWriteBatch(KonlDictWriter):
     def update(self, d: typing.Dict):
         for k, v in d.items():
             self.__setitem__(k, v)
+
+
+class KonlDefaultDict(KonlDict):
+    def __init__(self, cf: rocksdict.Rdict, prefix: str, default: typing.Union[int, str]):
+        self._cf = cf
+        self._prefix = f'{prefix}:dict'
+        self._default = default
+
+    def __getitem__(self, k: str) -> str:
+        key = self.build_key_name(k)
+
+        try:
+            return self._cf[key]
+        except KeyError:
+            return self._default

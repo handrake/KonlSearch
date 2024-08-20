@@ -8,7 +8,7 @@ from konlsearch.index import (TokenSearchMode,
                               IndexingStatusCode,
                               GetStatusCode)
 from konlsearch.set import KonlSet, KonlSetWriteBatch
-from konlsearch.dict import KonlDict, KonlDictWriteBatch
+from konlsearch.dict import KonlDict, KonlDefaultDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogRequest
 
 import datetime
@@ -509,6 +509,46 @@ def test_dict_writebatch(index):
 
     assert list(d.items()) == []
     assert len(d) == 0
+
+
+def test_defaultdict(index):
+    d = KonlDefaultDict(index._cf, "test", "10")
+
+    d["a"] = "1"
+    d["b"] = "2"
+    d["c"] = "3"
+
+    assert list(d.items()) == [("a", "1"), ("b", "2"), ("c", "3")]
+    assert len(d) == 3
+    assert d["d"] == "10"
+
+    del d["a"]
+
+    assert list(d.items()) == [("b", "2"), ("c", "3")]
+    assert len(d) == 2
+    assert d["d"] == "10"
+
+    del d["c"]
+
+    assert list(d.items()) == [("b", "2")]
+    assert len(d) == 1
+    assert d["d"] == "10"
+
+    del d["b"]
+
+    assert list(d.items()) == []
+    assert len(d) == 0
+    assert d["d"] == "10"
+
+    d["a"] = "1"
+    d["b"] = "2"
+    d["c"] = "3"
+
+    d.destroy()
+
+    assert list(d.items()) == []
+    assert len(d) == 0
+    assert d["d"] == "10"
 
 
 def test_trie_suggestion(index):
