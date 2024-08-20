@@ -130,13 +130,13 @@ class KonlIndexWriter(abc.ABC):
 
 
 class KonlIndexWriteBatch(KonlIndexWriter):
-    def __init__(self, index: KonlIndex, wb: rocksdict.WriteBatch):
+    def __init__(self, index: KonlIndex):
         self._cf = index._cf
         self._iter = self._cf.iter()
-        self._wb = wb
+        self._wb = rocksdict.WriteBatch()
         self._name = index._name
         self._cf_handle = self._cf.get_column_family_handle(self._name)
-        self._inverted_index_wb = index._inverted_index.to_write_batch(wb)
+        self._inverted_index_wb = index._inverted_index.to_write_batch(self._wb)
         self._locks = index._locks
         self._prefix = index._prefix
         self._len_prefix = index._len_prefix
@@ -332,8 +332,7 @@ class KonlIndex(KonlIndexWriter):
         return IndexingResult.success(last_document_id)
 
     def to_write_batch(self):
-        wb = rocksdict.WriteBatch()
-        return KonlIndexWriteBatch(self, wb)
+        return KonlIndexWriteBatch(self)
 
     def delete(self, document_id) -> None:
         with self._locks.get(self._name):
