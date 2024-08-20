@@ -7,7 +7,14 @@ import rocksdict
 
 
 @dataclass
-class SearchLogDto:
+class SearchLogRequest:
+    size: int
+    token: str
+
+
+@dataclass
+class SearchLogResponse:
+    seq_id: str
     size: int
     token: str
 
@@ -35,11 +42,11 @@ class KonlSearchLog:
         key = self.__build_key_name(seq_id, token)
         self._cf[key] = size
 
-    def append_multi(self, requests: typing.List[SearchLogDto]):
+    def append_multi(self, requests: typing.List[SearchLogRequest]):
         for request in requests:
             self.append(request.token, request.size)
 
-    def get_range(self, start_timestamp, end_timestamp):
+    def get_range(self, start_timestamp: int, end_timestamp: int) -> typing.List[SearchLogResponse]:
         if end_timestamp <= start_timestamp:
             return []
 
@@ -53,13 +60,69 @@ class KonlSearchLog:
         result = []
 
         while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key:
-            r = SearchLogDto(token=self.__get_token_from_key(it.key()), size=it.value())
+            r = SearchLogResponse(
+                seq_id=self.__get_seq_id_from_key(it.key()),
+                token=self.__get_token_from_key(it.key()),
+                size=it.value()
+            )
             result.append(r)
             it.next()
 
         return result
 
-    def __build_key_id(self, seq_id: int) -> str:
+    def get_range_seq_id(self, start_seq_id: str, end_seq_id: str) -> typing.List[SearchLogResponse]:
+        if end_seq_id <= start_seq_id:
+            return []
+
+        it = self._cf.iter()
+
+        start_key = self.__build_key_seq_id(start_seq_id)
+        end_key = self.__build_key_seq_id(end_seq_id)
+
+        it.seek(start_key)
+
+        result = []
+
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix) and it.key() < end_key:
+            r = SearchLogResponse(
+                seq_id=self.__get_seq_id_from_key(it.key()),
+                token=self.__get_token_from_key(it.key()),
+                size=it.value()
+            )
+            result.append(r)
+            it.next()
+
+        return result
+
+    def get_first_seq_id(self) -> typing.Optional[str]:
+        it = self._cf.iter()
+
+        it.seek(self._prefix)
+
+        if it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+            return self.__get_seq_id_from_key(it.key())
+        else:
+            return None
+
+    def get_last_seq_id(self) -> typing.Optional[str]:
+        it = self._cf.iter()
+
+        it.seek(self._prefix)
+
+        while it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+            it.next()
+
+        it.prev()
+
+        if it.valid() and type(it.key()) == str and it.key().startswith(self._prefix):
+            return self.__get_seq_id_from_key(it.key())
+        else:
+            return None
+
+    def __build_key_id(self, timestamp: int) -> str:
+        return f'{self._prefix}:{timestamp}'
+
+    def __build_key_seq_id(self, seq_id: str) -> str:
         return f'{self._prefix}:{seq_id}'
 
     def __build_key_name(self, seq_id: int, token: str) -> str:
@@ -70,3 +133,7 @@ class KonlSearchLog:
 
     def __get_token_from_key(self, key_with_prefix: str) -> str:
         return key_with_prefix.split(":")[3]
+
+    def __get_seq_id_from_key(self, key_with_prefix: str) -> str:
+        parts = key_with_prefix.split(":")
+        return f'{parts[1]}:{parts[2]}'

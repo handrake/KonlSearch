@@ -9,7 +9,7 @@ from konlsearch.index import (TokenSearchMode,
                               GetStatusCode)
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDictWriteBatch
-from konlsearch.log import KonlSearchLog, SearchLogDto
+from konlsearch.log import KonlSearchLog, SearchLogRequest
 
 import datetime
 import pytest
@@ -192,9 +192,24 @@ def test_search_mode_or(index):
 
     ts = int(datetime.datetime.now().timestamp())
 
-    tokens = [r.token for r in index._inverted_index._log.get_range(ts - 10, ts + 10)]
+    log = index._inverted_index._log
+    inverted_index = index._inverted_index
+
+    tokens = [r.token for r in log.get_range(ts - 10, ts + 10)]
+
+    seq1 = log.get_first_seq_id()
 
     assert document_ids == [10, 18, 81] and tokens == ["같은", "비스크"]
+
+    time.sleep(1)
+
+    document_ids = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+
+    tokens = [r.token for r in log.get_range(ts - 10, ts + 10)]
+
+    seq2 = log.get_last_seq_id()
+
+    assert document_ids == [9, 49, 97] and tokens == ["같은", "비스크", "특별", "마법소녀"] and seq1 < seq2
 
 
 def test_search_mode_and(index):
@@ -498,7 +513,7 @@ def test_search_log(index):
 
     tokens = sorted(list(index.get_tokens(10)))
 
-    requests = [SearchLogDto(size=1, token=token) for token in tokens]
+    requests = [SearchLogRequest(size=1, token=token) for token in tokens]
 
     log = KonlSearchLog(index._cf)
 
