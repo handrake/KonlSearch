@@ -25,6 +25,9 @@ class KonlCounter:
 
         return len
 
+    def __contains__(self, key: str) -> bool:
+        return key in self._dict
+
     def __delitem__(self, key: str):
         if key not in self._dict:
             return
@@ -35,7 +38,21 @@ class KonlCounter:
     def __getitem__(self, key: str):
         return self._dict[key]
 
-    def increase(self, key: str, increment: int):
+    def __setitem__(self, key: str, count: int):
+        old_count = self._dict[key]
+        self._dict[key] = count
+        self._sorted_set.add(self.build_set_key(key, count))
+
+        if old_count != 0:
+            self._sorted_set.remove(self.build_set_key(key, old_count))
+
+        self.compact()
+
+    def destroy(self):
+        for k, _ in self.items():
+            self.__delitem__(k)
+
+    def increase(self, key: str, increment: int = 1):
         count = self._dict[key]
         new_count = count + increment
 
@@ -46,7 +63,7 @@ class KonlCounter:
 
         self.compact()
 
-    def decrease(self, key: str, decrement: int):
+    def decrease(self, key: str, decrement: int = 1):
         count = self._dict[key]
 
         if count == 0:

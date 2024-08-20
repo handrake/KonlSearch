@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import rocksdict
 import typing
 
 from . import utility
-from .dict import KonlDict, KonlDictView, KonlDictWriteBatch
+from .counter import KonlCounter
+from .dict import KonlDict, KonlDictView, KonlDictWriteBatch, KonlDefaultDict
 from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 
 import hgtk
 
 _TOKEN_DICT = "token_dict"
 _TOKEN_REVERSE_DICT = "token_reverse_dict"
+_TOKEN_FREQUENCY_DICT = "token_frequency_dict"
+
+
+@dataclass
+class SearchFrequencyResponse:
+    token: str
+    count: int
 
 
 def build_trie_name(index_name) -> str:
@@ -116,6 +125,7 @@ class KonlTrie:
         self._cf = utility.create_or_get_cf(db, self._name)
         self._token_dict = KonlDict(self._cf, _TOKEN_DICT)
         self._token_reverse_dict = KonlDict(self._cf, _TOKEN_REVERSE_DICT)
+        self._token_frequency_dict = KonlDefaultDict(self._cf, _TOKEN_FREQUENCY_DICT, 0)
 
     def close(self):
         self._cf.close()
@@ -167,5 +177,51 @@ class KonlTrie:
         del self._token_dict[token]
         del self._token_reverse_dict[decomposed_token]
 
+        self.__delete_counter(token)
+        del self._token_frequency_dict[token]
+
+    def increase_frequency(self, token: str, size: int):
+        if token not in self._token_dict or size <= 0:
+            return
+
+        self._token_frequency_dict[token] += size
+        self.__update_counter(token)
+
+    def decrease_frequency(self, token: str, size: int):
+        if token not in self._token_dict or size <= 0:
+            return
+
+        self._token_frequency_dict[token] = max(self._token_frequency_dict[token] - size, 0)
+        self.__update_counter(token)
+
     def search(self, prefix: str) -> typing.List[str]:
         return self.to_view().search(prefix)
+
+    def search_by_frequency(self, prefix: str) -> typing.List[SearchFrequencyResponse]:
+        return [SearchFrequencyResponse(token=counter[0], count=counter[1]) for counter
+                in KonlCounter(self._cf, self.__build_frequency_prefix(prefix), 5).items()]
+
+    def __build_frequency_prefix(self, s: str):
+        return f'freq:{s}'
+
+    def __update_counter(self, token: str):
+        decomposed_token = decompose_word(token)
+
+        for i in range(len(decomposed_token)):
+            s = decomposed_token[:i+1]
+
+            if len(s) >= 2:
+                s1 = s[:-1]
+                counter_s1 = KonlCounter(self._cf, self.__build_frequency_prefix(s1), 5)
+                counter_s1[token] = self._token_frequency_dict[token]
+
+    def __delete_counter(self, token: str):
+        decomposed_token = decompose_word(token)
+
+        for i in range(len(decomposed_token)):
+            s = decomposed_token[:i+1]
+
+            if len(s) >= 2:
+                s1 = s[:-1]
+                counter_s1 = KonlCounter(self._cf, self.__build_frequency_prefix(s1), 5)
+                counter_s1.destroy()

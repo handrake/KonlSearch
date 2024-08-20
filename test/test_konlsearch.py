@@ -617,3 +617,24 @@ def test_counter(index):
     counter.increase("a", 10)
 
     assert list(counter.items()) == [('c', 1000), ('b', 100), ('a', 10)]
+
+
+def test_search_by_frequency(index):
+    r1 = index.search(["같은", "비스크"], TokenSearchMode.OR)
+    r2 = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+    r3 = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+    r4 = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+    r5 = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+    r6 = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+    r7 = index.search(["특별", "마법소녀"], TokenSearchMode.OR)
+    r8 = index.search(["마법", "모래"], TokenSearchMode.OR)
+
+    inverted_index = index._inverted_index
+    inverted_index.aggregate_frequency()
+
+    r10 = inverted_index._trie.search_by_frequency("ㅁ")
+
+    tokens = [r.token for r in r10]
+    counts = [r.count for r in r10]
+
+    assert tokens == ["마법소녀", "마법", "모래"] and counts == [6, 1, 1]

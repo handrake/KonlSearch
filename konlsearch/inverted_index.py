@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import rocksdict
 import typing
 import enum
@@ -11,6 +12,9 @@ from . import utility
 from .log import KonlSearchLog
 from .set import KonlSet, KonlSetView, KonlSetWriteBatch
 from .trie import KonlTrie
+
+
+_LOG_OFFSET = "log:offset"
 
 
 class TokenSearchMode(StrEnum):
@@ -51,6 +55,7 @@ class KonlInvertedIndex:
         self._cf = utility.create_or_get_cf(db, self._name)
         self._trie = KonlTrie(db, name)
         self._log = KonlSearchLog(self._cf)
+        self._log_offset = self._cf[_LOG_OFFSET] if _LOG_OFFSET in self._cf else None
 
     def __getitem__(self, token: str) -> typing.Set[int]:
         s = KonlSetView(self._cf.iter(), token)
@@ -112,6 +117,15 @@ class KonlInvertedIndex:
 
     def search_suggestions(self, prefix: str) -> typing.List[str]:
         return self._trie.to_view().search(prefix)
+
+    def aggregate_frequency(self):
+        first_seq_id = self._log_offset or self._log.get_first_seq_id()
+        last_seq_id = self._log.generate_seq_id()
+
+        for entry in self._log.get_range_seq_id(first_seq_id, last_seq_id):
+            self._trie.increase_frequency(entry.token, entry.size)
+
+        self._cf[_LOG_OFFSET] = last_seq_id
 
     @staticmethod
     def __build_inverted_index_name(name: str) -> str:
