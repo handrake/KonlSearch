@@ -50,6 +50,10 @@ class KonlDictWriter(AbstractKonlDict):
     def update(self, d: typing.Dict):
         pass
 
+    def destroy(self):
+        for k, _ in self.items():
+            self.__delitem__(k)
+
 
 class KonlDictView(KonlDictReader):
     def __init__(self, iter: rocksdict.RdictIter, prefix: str):

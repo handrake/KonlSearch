@@ -464,6 +464,15 @@ def test_dict(index):
     assert list(d.items()) == []
     assert len(d) == 0
 
+    d["a"] = "1"
+    d["b"] = "2"
+    d["c"] = "3"
+
+    d.destroy()
+
+    assert list(d.items()) == []
+    assert len(d) == 0
+
 
 def test_dict_writebatch(index):
     wb1 = rocksdict.WriteBatch()
@@ -492,6 +501,14 @@ def test_dict_writebatch(index):
 
     assert list(d.items()) == [("b", "2"), ("c", "3")]
     assert len(d) == 2
+
+    wb3 = rocksdict.WriteBatch()
+    d_wb = KonlDictWriteBatch(wb3, cf_handle, "test")
+
+    d.destroy()
+
+    assert list(d.items()) == []
+    assert len(d) == 0
 
 
 def test_trie_suggestion(index):
