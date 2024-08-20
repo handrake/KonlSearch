@@ -99,9 +99,7 @@ class KonlIndexWriter(abc.ABC):
         sanitized_document = self.sanitize(document)
 
         return {token for token in
-                set(mecab.morphs(sanitized_document))
-                .union(set(sanitized_document.split()))
-                if self.is_indexable(token)}
+                set(mecab.morphs(sanitized_document)).union(set(sanitized_document.split())) if self.is_indexable(token)}
 
     def generate_hash(self, document) -> str:
         return xxhash.xxh128(document).hexdigest()
