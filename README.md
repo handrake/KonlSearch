@@ -46,9 +46,6 @@ More internal and advanced usages can be found under [test/test_konlsearch.py](t
 
 ![Profile results](images/kowiki_profile.png)
 
-## Limitations
-- Currently, a write lock on the entire index is acquire when indexing a document. RocksDB's WriteBatch may be used to overcome this issue, but it may or may not be implemented in the near future.
-
 ## Acknowledgements
 
 - KonlSearch relies on [python-mecab-ko](https://github.com/jonghwanhyeon/python-mecab-ko) for tokenizing and [hangul-toolkit](https://github.com/bluedisk/hangul-toolkit) for decomposing Korean characters into consonants and vowels.

@@ -190,59 +190,57 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         return last_document_id
 
     def index(self, document) -> IndexingResult:
-        with (self._locks.get(self._name)):
-            document_hash = self.generate_hash(document)
-            conflicting_document_id = self.get_document_id_from_hash(document_hash)
+        document_hash = self.generate_hash(document)
+        conflicting_document_id = self.get_document_id_from_hash(document_hash)
 
-            if conflicting_document_id:
-                return IndexingResult.conflict(conflicting_document_id)
+        if conflicting_document_id:
+            return IndexingResult.conflict(conflicting_document_id)
 
-            tokens = self.tokenize(document)
+        tokens = self.tokenize(document)
 
-            self._last_document_id += 1
+        self._last_document_id += 1
 
-            key = self.build_key_name(self._last_document_id)
+        key = self.build_key_name(self._last_document_id)
 
-            self._wb.put(key, document, self._cf_handle)
-            self._wb.put(self.build_token_name(self._last_document_id), tokens, self._cf_handle)
+        self._wb.put(key, document, self._cf_handle)
+        self._wb.put(self.build_token_name(self._last_document_id), tokens, self._cf_handle)
 
-            self._inverted_index_wb.index(self._last_document_id, tokens)
+        self._inverted_index_wb.index(self._last_document_id, tokens)
 
-            self._indexing_count += 1
-            self.add_document_hash(self._last_document_id, document_hash)
+        self._indexing_count += 1
+        self.add_document_hash(self._last_document_id, document_hash)
 
         return IndexingResult.success(self._last_document_id)
 
     def delete(self, document_id) -> None:
-        with self._locks.get(self._name):
-            if document_id in self._deleted_document_ids:
-                return
+        if document_id in self._deleted_document_ids:
+            return
 
-            document_id_key = self.build_key_name(document_id)
+        document_id_key = self.build_key_name(document_id)
 
-            get_response = self.get(document_id)
+        get_response = self.get(document_id)
 
-            if get_response.status_code != GetStatusCode.SUCCESS:
-                return
+        if get_response.status_code != GetStatusCode.SUCCESS:
+            return
 
-            document_hash = self.generate_hash(get_response.result.document)
-            self.delete_document_hash(document_hash)
+        document_hash = self.generate_hash(get_response.result.document)
+        self.delete_document_hash(document_hash)
 
-            token_name = self.build_token_name(document_id)
+        token_name = self.build_token_name(document_id)
 
-            it = self._iter
-            it.seek(token_name)
+        it = self._iter
+        it.seek(token_name)
 
-            if it.valid() and it.key() == token_name:
-                self._inverted_index_wb.delete(document_id, it.value())
+        if it.valid() and it.key() == token_name:
+            self._inverted_index_wb.delete(document_id, it.value())
 
-            self._wb.delete(token_name, self._cf_handle)
+        self._wb.delete(token_name, self._cf_handle)
 
-            document_id_key = self.build_key_name(document_id)
-            self._wb.delete(document_id_key, self._cf_handle)
+        document_id_key = self.build_key_name(document_id)
+        self._wb.delete(document_id_key, self._cf_handle)
 
-            self._deleting_count += 1
-            self._deleted_document_ids.add(document_id)
+        self._deleting_count += 1
+        self._deleted_document_ids.add(document_id)
 
     def get(self, document_id: int) -> IndexGetResponse:
         if document_id in self._deleted_document_ids:
