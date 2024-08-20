@@ -234,7 +234,24 @@ def test_search_mode_complex(index):
     assert document_ids == [1, 3, 9, 10, 18, 81]
 
 
-def test_index_writebatch(index):
+def test_index_writebatch1(konl_search):
+    index_name = "title"
+    index = konl_search.index(index_name)
+
+    r = []
+
+    for title in titles[:3]:
+        r.append(index.index(title))
+
+    codes = [result.status_code for result in r]
+    document_ids = [result.document_id for result in r]
+
+    assert all([code == IndexingStatusCode.SUCCESS for code in codes]) and document_ids == [1, 2, 3]
+
+    index.close()
+
+
+def test_index_writebatch2(index):
     index_wb = index.to_write_batch()
 
     r1 = index_wb.index("기동전사 건담")
