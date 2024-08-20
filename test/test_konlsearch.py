@@ -190,7 +190,11 @@ def index(konl_search):
 def test_search_mode_or(index):
     document_ids = index.search(["같은", "비스크"], TokenSearchMode.OR)
 
-    assert document_ids == [10, 18, 81]
+    ts = int(datetime.datetime.now().timestamp())
+
+    tokens = [r.token for r in index._inverted_index._log.get_range(ts - 10, ts + 10)]
+
+    assert document_ids == [10, 18, 81] and tokens == ["같은", "비스크"]
 
 
 def test_search_mode_and(index):

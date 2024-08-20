@@ -8,8 +8,9 @@ from strenum import StrEnum
 
 from . import utility
 
-from .trie import KonlTrie
+from .log import KonlSearchLog
 from .set import KonlSet, KonlSetView, KonlSetWriteBatch
+from .trie import KonlTrie
 
 
 class TokenSearchMode(StrEnum):
@@ -49,6 +50,7 @@ class KonlInvertedIndex:
         self._name = self.__build_inverted_index_name(name)
         self._cf = utility.create_or_get_cf(db, self._name)
         self._trie = KonlTrie(db, name)
+        self._log = KonlSearchLog(self._cf)
 
     def __getitem__(self, token: str) -> typing.Set[int]:
         s = KonlSetView(self._cf.iter(), token)
@@ -97,6 +99,9 @@ class KonlInvertedIndex:
             s = KonlSetView(iter, token)
 
             document_ids = {int(e) for e in s.items()}
+
+            if document_ids:
+                self._log.append(token, 1)
 
             if mode == TokenSearchMode.OR or i == 0:
                 result_set.update(document_ids)
