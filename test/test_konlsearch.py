@@ -10,6 +10,7 @@ from konlsearch.index import (TokenSearchMode,
 from konlsearch.set import KonlSet, KonlSetWriteBatch
 from konlsearch.dict import KonlDict, KonlDefaultDict, KonlDictWriteBatch
 from konlsearch.log import KonlSearchLog, SearchLogRequest
+from konlsearch.counter import KonlCounter
 
 import datetime
 import pytest
@@ -591,3 +592,28 @@ def test_search_log(index):
 
     assert seq_id1.split(":")[1] == seq_id2.split(":")[1]
     assert seq_id3.split(":")[1] == '0002'
+
+
+def test_counter(index):
+    counter = KonlCounter(index._cf, "test", 3)
+
+    assert len(counter) == 0
+
+    counter.increase("a", 10)
+    counter.increase("b", 100)
+    counter.increase("c", 1000)
+    counter.increase("d", 10000)
+
+    assert len(counter) == 3
+
+    counter.decrease("d", 1000)
+
+    assert counter["d"] == 9000
+
+    counter.decrease("d", 8999)
+
+    assert list(counter.items()) == [('c', 1000), ('b', 100), ('d', 1)]
+
+    counter.increase("a", 10)
+
+    assert list(counter.items()) == [('c', 1000), ('b', 100), ('a', 10)]
