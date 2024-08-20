@@ -135,7 +135,6 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         self._name = index._name
         self._cf_handle = self._cf.get_column_family_handle(self._name)
         self._inverted_index_wb = index._inverted_index.to_write_batch(self._wb)
-        self._locks = index._locks
         self._prefix = index._prefix
         self._len_prefix = index._len_prefix
         self._hash_prefix = index._hash_prefix
