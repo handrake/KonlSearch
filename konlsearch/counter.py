@@ -93,11 +93,13 @@ class KonlCounter:
         for element in self._sorted_set.items():
             yield self.get_from_element(element)
 
-    def build_set_key(self, key: str, count: int) -> str:
+    @staticmethod
+    def build_set_key(key: str, count: int) -> str:
         flipped_count = count ^ (16 ** _DIGIT_COUNT - 1)
         count_x = f'{flipped_count:x}'.rjust(_DIGIT_COUNT, '0')
         return f'{count_x}:{key}'
 
-    def get_from_element(self, element: str) -> tuple[str, int]:
+    @staticmethod
+    def get_from_element(element: str) -> tuple[str, int]:
         value, key = element.split(":")
         return key, int(value, 16) ^ (16 ** _DIGIT_COUNT - 1)
