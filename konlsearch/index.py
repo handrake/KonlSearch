@@ -213,8 +213,6 @@ class KonlIndexWriteBatch(KonlIndexWriter):
         if document_id in self._deleted_document_ids:
             return
 
-        document_id_key = self.build_key_name(document_id)
-
         get_response = self.get(document_id)
 
         if get_response.status_code != GetStatusCode.SUCCESS:
